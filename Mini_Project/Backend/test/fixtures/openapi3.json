@@ -1,0 +1,16 @@
+{
+  "openapi": "3.0.3",
+  "info": { "title": "User API", "version": "1.0.0", "description": "Users." },
+  "servers": [{ "url": "https://api.example.com/v1", "description": "Production" }, { "url": "https://staging.example.com/v1" }],
+  "paths": {
+    "/users/{id}": {
+      "parameters": [{ "name": "id", "in": "path", "required": true, "schema": { "type": "string" } }],
+      "get": { "tags": ["Users"], "summary": "Get a user", "parameters": [{ "name": "expand", "in": "query", "schema": { "type": "boolean", "default": false } }], "responses": { "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" } } } }, "404": { "description": "Missing" } }, "security": [{ "bearerAuth": [] }] },
+      "post": { "requestBody": { "required": true, "content": { "application/json": { "schema": { "$ref": "#/components/schemas/User" }, "example": { "name": "Ada" } } } }, "responses": { "201": { "description": "Created" } } }
+    }
+  },
+  "components": {
+    "schemas": { "User": { "type": "object", "required": ["name"], "properties": { "name": { "type": "string", "minLength": 1 }, "age": { "type": "integer", "minimum": 0 } } } },
+    "securitySchemes": { "bearerAuth": { "type": "http", "scheme": "bearer" }, "apiKey": { "type": "apiKey", "name": "X-API-Key", "in": "header" } }
+  }
+}

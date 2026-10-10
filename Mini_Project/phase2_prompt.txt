@@ -1,0 +1,1349 @@
+==================================================
+IMPORTANT PROJECT DIRECTORY STRUCTURE
+==================================================
+
+The current working directory is:
+
+Mini_Project/
+
+The existing frontend application is already implemented at:
+
+Mini_Project/frontend/
+
+DO NOT move, rename, delete, or recreate the frontend.
+
+The frontend must remain at:
+
+Mini_Project/frontend/
+
+For Phase 2, create the backend as a SEPARATE SIBLING DIRECTORY:
+
+Mini_Project/backend/
+
+The final high-level structure should be:
+
+Mini_Project/
+├── frontend/        ← EXISTING React application
+│   ├── src/
+│   ├── public/
+│   ├── package.json
+│   └── ...
+│
+├── backend/         ← CREATE THIS
+│   ├── src/
+│   ├── package.json
+│   ├── tsconfig.json
+│   ├── .env.example
+│   └── ...
+│
+└── ...
+
+The frontend and backend should be separate applications.
+
+Frontend:
+- React
+- TypeScript
+- Tailwind CSS
+- Existing UI/components must be preserved
+
+Backend:
+- Node.js
+- TypeScript
+- Express (only if appropriate after inspecting the repository)
+
+Communication:
+
+frontend
+    ↓
+backend
+    ↓
+target API
+
+Do NOT put backend code inside frontend/src.
+
+Do NOT create a second frontend.
+
+Do NOT duplicate the existing project.
+
+Before creating the backend, inspect the existing frontend structure and package configuration.
+
+----------------------------------------------------------------------------------
+
+You are the lead full-stack engineer working on a project called APIForge.
+
+APIForge is an API development and intelligent API testing platform.
+
+The project is being developed as a student/academic project, but the implementation should follow proper production-style software engineering practices wherever reasonably possible.
+
+IMPORTANT:
+Do NOT rebuild the project from scratch.
+Do NOT replace the existing UI unnecessarily.
+Do NOT remove existing functionality.
+First inspect and understand the existing codebase, architecture, components, routes, styling, and package configuration.
+
+==================================================
+PROJECT CONTEXT
+==================================================
+
+APIForge is intended to provide the following core pipeline:
+
+API Specification
+      ↓
+Test Generation
+      ↓
+Test Execution
+      ↓
+Validation
+      ↓
+AI Diagnosis
+      ↓
+Reports
+
+The final system will eventually include:
+
+- Dashboard
+- Collections
+- Request Builder
+- History
+- Environments
+- OpenAPI Import
+- Mock Server
+- Response Validation
+- AI Assistant
+- Test Generator
+- Documentation Generator
+- JSON Generator
+- API testing and execution
+- AI-powered failure diagnosis
+
+However, DO NOT implement all of these features now.
+
+We are currently implementing PHASE 2 only.
+
+==================================================
+CURRENT PROJECT STATUS
+==================================================
+
+The Dashboard UI has already been implemented.
+
+The existing dashboard contains, among other things:
+
+- APIForge branding
+- Sidebar navigation
+- Dashboard
+- Collections
+- Request Builder
+- History
+- Environments
+- OpenAPI Import
+- Mock Server
+- Response Validation
+- AI Assistant
+- Test Generator
+- Documentation
+- JSON Generator
+- New Request button
+- Import OpenAPI button
+- Dashboard statistics
+- Quick Actions
+- API Activity
+- API Health
+
+The existing visual design is clean, modern, minimal, developer-oriented and similar in quality to modern API development tools.
+
+DO NOT redesign the Dashboard.
+
+Maintain the existing design system:
+- Typography
+- Spacing
+- Border radius
+- Cards
+- Sidebar
+- Header
+- Buttons
+- Icons
+- Colors
+- Responsive behavior
+- Tailwind conventions
+- Existing component patterns
+
+The Request Builder must feel like it belongs to the existing APIForge application.
+
+==================================================
+PHASE 2 OBJECTIVE
+==================================================
+
+Implement the following:
+
+1. Request Builder UI
+2. Backend server
+3. API request execution engine
+4. Frontend ↔ backend communication
+5. Response viewer
+6. Request history foundation
+7. Proper error handling
+8. Basic authentication support
+9. Timeout handling
+10. Testing of the complete request execution flow
+
+The primary goal is:
+
+USER
+  ↓
+Request Builder
+  ↓
+Frontend
+  ↓
+Backend
+  ↓
+Target API
+  ↓
+Backend
+  ↓
+Frontend
+  ↓
+Response Viewer
+
+At the end of Phase 2, a user must be able to enter a real API URL, configure a request, send it, and see the real response inside APIForge.
+
+==================================================
+STEP 1 — INSPECT THE EXISTING CODEBASE
+==================================================
+
+Before changing anything:
+
+1. Inspect the complete project structure.
+2. Identify:
+   - frontend framework
+   - backend status, if any
+   - build tool
+   - package manager
+   - TypeScript configuration
+   - Tailwind configuration
+   - routing system
+   - existing component architecture
+   - existing API/service utilities
+   - environment configuration
+   - existing state management
+   - existing UI component library
+3. Inspect the existing Dashboard implementation.
+4. Identify how navigation currently works.
+5. Identify whether a Request Builder page/component already exists.
+6. Identify whether a backend already exists.
+7. Identify whether there are existing API/request utilities that can be reused.
+8. Inspect package.json files.
+9. Inspect README and configuration files.
+10. Determine the safest way to integrate Phase 2 into the current architecture.
+
+Do NOT start coding before understanding the existing project.
+
+After inspection, briefly summarize your understanding internally and then proceed with implementation.
+
+==================================================
+PART 1 — REQUEST BUILDER UI
+==================================================
+
+Create or complete the Request Builder page.
+
+The Request Builder should be accessible from:
+
+- Sidebar → Request Builder
+- Dashboard → New Request
+
+If the existing routing architecture supports route-based navigation, create an appropriate route such as:
+
+/request-builder
+
+or follow the existing project's routing conventions.
+
+Do not introduce a new routing library if one already exists.
+
+==================================================
+REQUEST BUILDER LAYOUT
+==================================================
+
+The interface should contain:
+
+---------------------------------------------
+TOP REQUEST BAR
+---------------------------------------------
+
+HTTP Method selector:
+
+GET
+POST
+PUT
+PATCH
+DELETE
+HEAD
+OPTIONS
+
+URL input:
+
+https://api.example.com/users
+
+Send button.
+
+The Send button should execute the request.
+
+Optional:
+Save button for future collection support.
+
+---------------------------------------------
+REQUEST CONFIGURATION TABS
+---------------------------------------------
+
+Create tabs for:
+
+1. Params
+2. Authorization
+3. Headers
+4. Body
+
+Do NOT implement advanced test scripting or AI functionality in this phase.
+
+---------------------------------------------
+PARAMS TAB
+---------------------------------------------
+
+Allow users to add query parameters dynamically.
+
+Example:
+
+Key          Value
+-------------------------
+page         1
+limit        10
+search       john
+
+Requirements:
+
+- Add parameter
+- Remove parameter
+- Enable/disable parameter
+- Edit key
+- Edit value
+
+The frontend should construct the query string correctly.
+
+Example:
+
+Input:
+
+page = 1
+limit = 10
+
+Result:
+
+?page=1&limit=10
+
+Do not manually concatenate strings in unsafe ways.
+
+Use URL/URLSearchParams where appropriate.
+
+---------------------------------------------
+HEADERS TAB
+---------------------------------------------
+
+Allow dynamic headers.
+
+Example:
+
+Content-Type    application/json
+Accept          application/json
+X-API-Key       abc123
+
+Requirements:
+
+- Add header
+- Remove header
+- Enable/disable header
+- Edit key
+- Edit value
+
+Do not expose sensitive values unnecessarily in logs.
+
+---------------------------------------------
+AUTHORIZATION TAB
+---------------------------------------------
+
+Implement basic authentication types:
+
+1. No Auth
+2. Bearer Token
+3. API Key
+4. Basic Auth
+
+Bearer Token:
+
+Authorization: Bearer <token>
+
+API Key:
+
+Allow configuration of:
+- Header-based API key
+- Query-parameter API key
+
+Basic Auth:
+
+Username
+Password
+
+The UI should make it clear what authentication method is currently active.
+
+Do not store secrets in source code.
+
+Do not print authentication credentials to console logs.
+
+---------------------------------------------
+BODY TAB
+---------------------------------------------
+
+Support request body for:
+
+POST
+PUT
+PATCH
+
+Provide body mode:
+
+- None
+- JSON
+
+For JSON mode, provide a code/editor-like textarea.
+
+Example:
+
+{
+  "name": "John",
+  "email": "john@example.com"
+}
+
+Before sending JSON:
+
+- Validate JSON syntax.
+- Display a useful validation error if malformed.
+- Do not send malformed JSON as application/json.
+
+Automatically set Content-Type to application/json when appropriate, unless the user has explicitly configured a different Content-Type.
+
+Do not implement multipart/form-data or binary uploads yet unless the existing architecture already supports them.
+
+==================================================
+PART 2 — SEND REQUEST
+==================================================
+
+When the user clicks Send:
+
+1. Validate the URL.
+2. Validate JSON body if present.
+3. Build the request configuration.
+4. Send it to the backend.
+5. Backend executes the actual target API request.
+6. Backend returns structured response data.
+7. Frontend displays the result.
+
+IMPORTANT:
+
+The browser frontend should NOT directly call arbitrary third-party APIs if that creates CORS problems.
+
+Use the backend as the API execution/proxy layer.
+
+Architecture:
+
+React
+  ↓
+POST /api/requests/execute
+  ↓
+Node.js backend
+  ↓
+Target API
+  ↓
+Node.js backend
+  ↓
+React
+
+==================================================
+PART 3 — BACKEND
+==================================================
+
+If there is no backend, create one according to the existing project structure.
+
+Preferred backend stack:
+
+Node.js
+Express
+TypeScript
+
+But first inspect the existing project.
+
+Do NOT introduce Express if the existing backend already uses another appropriate framework.
+
+The backend should expose:
+
+POST /api/requests/execute
+
+Expected request structure should be strongly typed.
+
+Example:
+
+{
+  "method": "GET",
+  "url": "https://api.example.com/users",
+  "queryParams": [],
+  "headers": [],
+  "body": null,
+  "auth": {
+    "type": "none"
+  }
+}
+
+Use a clean architecture such as:
+
+backend/
+  src/
+    routes/
+    controllers/
+    services/
+    middleware/
+    types/
+    utils/
+
+Adapt this to the existing repository instead of blindly creating duplicate structures.
+
+==================================================
+PART 4 — API EXECUTION SERVICE
+==================================================
+
+Create a dedicated request execution service.
+
+For example:
+
+RequestController
+      ↓
+RequestService
+      ↓
+HTTP Client
+      ↓
+Target API
+
+Use an appropriate HTTP client already present in the project if possible.
+
+If none exists, use a well-maintained Node.js HTTP client appropriate for TypeScript.
+
+The execution service must support:
+
+- GET
+- POST
+- PUT
+- PATCH
+- DELETE
+- HEAD
+- OPTIONS
+
+It must support:
+
+- URL
+- Query parameters
+- Headers
+- Request body
+- Bearer authentication
+- API key
+- Basic authentication
+- Timeout
+- Response headers
+- Response body
+- Status code
+- Response time
+
+==================================================
+PART 5 — RESPONSE FORMAT
+==================================================
+
+The backend should return a predictable structured response.
+
+Example:
+
+{
+  "success": true,
+  "status": 200,
+  "statusText": "OK",
+  "responseTime": 184,
+  "headers": {
+    "content-type": "application/json"
+  },
+  "body": {
+    "id": 1,
+    "name": "John"
+  }
+}
+
+For errors:
+
+{
+  "success": false,
+  "error": {
+    "type": "TIMEOUT",
+    "message": "The request timed out."
+  }
+}
+
+Do NOT return inconsistent response shapes.
+
+Create TypeScript interfaces/types shared appropriately between frontend and backend if the current project architecture allows it.
+
+==================================================
+PART 6 — RESPONSE VIEWER
+==================================================
+
+The Request Builder must display the response.
+
+Create a response section below the request configuration.
+
+It should show:
+
+- HTTP status
+- Status text
+- Response time
+- Response size if reasonably available
+- Response headers
+- Response body
+
+Example:
+
+---------------------------------------------
+Response
+
+200 OK     184 ms
+---------------------------------------------
+
+Tabs:
+
+Body
+Headers
+
+Body example:
+
+{
+  "id": 1,
+  "name": "John"
+}
+
+JSON should be formatted and readable.
+
+If the response is JSON:
+- Pretty print JSON
+- Use syntax highlighting if an existing code viewer/component is available
+
+If the response is plain text:
+- Display as text
+
+If the response is HTML/XML:
+- Display safely as text
+
+Do NOT render arbitrary API HTML directly into the page.
+
+Handle empty responses gracefully.
+
+==================================================
+PART 7 — LOADING STATE
+==================================================
+
+While a request is executing:
+
+- Disable Send button or show appropriate loading behavior
+- Display a loading indicator
+- Show that the request is in progress
+- Prevent accidental duplicate submissions where appropriate
+
+After completion:
+
+- Restore Send button
+- Display response
+
+Do not freeze the UI.
+
+==================================================
+PART 8 — ERROR HANDLING
+==================================================
+
+Handle these cases properly:
+
+1. Invalid URL
+2. Unsupported protocol
+3. DNS failure
+4. Connection refused
+5. Connection reset
+6. Timeout
+7. SSL/TLS failure
+8. 400 response
+9. 401 response
+10. 403 response
+11. 404 response
+12. 429 response
+13. 500 response
+14. 502 response
+15. 503 response
+16. Invalid JSON request body
+17. Empty response
+18. Unexpected backend error
+
+IMPORTANT:
+
+HTTP 4xx/5xx responses are NOT necessarily execution errors.
+
+For example:
+
+GET /users
+
+returns:
+
+404 Not Found
+
+This means the request successfully reached the server and the server returned HTTP 404.
+
+The UI should display:
+
+404 Not Found
+
+rather than incorrectly showing:
+
+"Request failed to execute."
+
+Network-level failures should be separated from HTTP response errors.
+
+==================================================
+PART 9 — TIMEOUT
+==================================================
+
+Implement a reasonable request timeout.
+
+Prefer something like:
+
+30 seconds
+
+unless the existing project specifies another value.
+
+The timeout should be configurable in a clean way for future enhancement.
+
+When timeout occurs:
+
+Return a structured timeout error.
+
+Example:
+
+{
+  "success": false,
+  "error": {
+    "type": "TIMEOUT",
+    "message": "The API request exceeded the configured timeout."
+  }
+}
+
+==================================================
+PART 10 — SECURITY
+==================================================
+
+Because the backend will make requests to URLs supplied by users, treat this as an API proxy.
+
+Implement reasonable security protections.
+
+At minimum:
+
+- Only allow HTTP and HTTPS protocols.
+- Validate URLs server-side.
+- Never execute shell commands from user input.
+- Never interpolate user input into shell commands.
+- Do not log authorization tokens.
+- Do not log passwords.
+- Do not expose backend environment variables.
+- Do not return internal server stack traces to the frontend.
+- Validate request payloads.
+- Handle oversized request bodies appropriately.
+
+IMPORTANT FOR DEVELOPMENT:
+
+The application needs to be able to test local APIs during development.
+
+Therefore, do not blindly block localhost/127.0.0.1 if that would prevent testing local development APIs.
+
+If SSRF protection is implemented, structure it so it can be strengthened later without breaking legitimate local API testing.
+
+Clearly separate development-mode behavior from production security behavior where necessary.
+
+==================================================
+PART 11 — FRONTEND API SERVICE
+==================================================
+
+Create a dedicated frontend service for backend communication.
+
+For example:
+
+services/
+  requestService.ts
+
+The Request Builder should NOT directly contain fetch/axios networking logic everywhere.
+
+Prefer:
+
+RequestBuilder
+    ↓
+requestService.executeRequest()
+    ↓
+POST /api/requests/execute
+
+Use strong TypeScript typing.
+
+Avoid:
+
+any
+
+unless genuinely unavoidable.
+
+==================================================
+PART 12 — STATE MANAGEMENT
+==================================================
+
+Use the project's existing state management approach if one exists.
+
+Otherwise, keep state local to the Request Builder initially.
+
+Track:
+
+- method
+- URL
+- query parameters
+- headers
+- authorization
+- body
+- loading
+- response
+- error
+
+Do not introduce Redux/Zustand/etc. just for this feature if the project does not need it.
+
+Keep the architecture simple and maintainable.
+
+==================================================
+PART 13 — REQUEST HISTORY FOUNDATION
+==================================================
+
+Phase 2 should establish the foundation for History.
+
+Do NOT build the complete History page yet.
+
+However, structure the execution result so it can later be persisted.
+
+A request history item should conceptually contain:
+
+{
+  "method": "GET",
+  "url": "...",
+  "status": 200,
+  "responseTime": 184,
+  "timestamp": "..."
+}
+
+If the project already has a database layer, you may create the appropriate model/schema.
+
+If there is no database yet, DO NOT add a large database architecture solely for history.
+
+Instead, create clean interfaces/services so persistence can be added in the next phase.
+
+==================================================
+PART 14 — DASHBOARD INTEGRATION
+==================================================
+
+Connect the existing Dashboard to the Request Builder.
+
+Existing:
+
+"New Request"
+
+button should navigate to the Request Builder.
+
+Existing:
+
+"Request Builder"
+
+sidebar item should navigate to the same page.
+
+Do not change the visual design of the Dashboard unnecessarily.
+
+The dashboard should continue working exactly as before.
+
+==================================================
+PART 15 — RESPONSIVE DESIGN
+==================================================
+
+The Request Builder should work reasonably on:
+
+- Desktop
+- Laptop
+- Tablet
+
+Prioritize desktop because API development tools are primarily desktop-oriented.
+
+Do not sacrifice usability just to make everything fit on mobile.
+
+==================================================
+PART 16 — ACCESSIBILITY
+==================================================
+
+Use:
+
+- semantic buttons
+- labels
+- keyboard-accessible controls
+- proper form labels
+- meaningful aria labels where necessary
+- visible focus states
+
+Do not use clickable divs where buttons are appropriate.
+
+==================================================
+PART 17 — UI/UX REQUIREMENTS
+==================================================
+
+Match the existing APIForge visual language.
+
+The UI should feel:
+
+- Professional
+- Clean
+- Minimal
+- Developer-focused
+- Fast
+- Structured
+- Easy to scan
+
+Avoid:
+
+- excessive gradients
+- unnecessary animations
+- excessive rounded cards
+- giant buttons
+- unnecessary decorative elements
+- redesigning the existing dashboard
+
+Reuse existing components wherever possible.
+
+==================================================
+PART 18 — TESTING
+==================================================
+
+After implementation, test the complete system.
+
+At minimum test:
+
+TEST 1
+GET request
+
+Example:
+GET https://jsonplaceholder.typicode.com/users/1
+
+Expected:
+200
+
+TEST 2
+GET collection
+
+Example:
+GET https://jsonplaceholder.typicode.com/users
+
+Expected:
+200
+
+TEST 3
+POST JSON
+
+Example:
+POST https://jsonplaceholder.typicode.com/posts
+
+Body:
+
+{
+  "title": "APIForge",
+  "body": "Test request",
+  "userId": 1
+}
+
+Expected:
+201
+
+TEST 4
+404
+
+Example:
+GET https://jsonplaceholder.typicode.com/invalid-endpoint
+
+Expected:
+404
+
+TEST 5
+Malformed JSON
+
+Enter invalid JSON in Body.
+
+Expected:
+Frontend validation error before sending.
+
+TEST 6
+Invalid URL
+
+Example:
+not-a-valid-url
+
+Expected:
+Useful validation message.
+
+TEST 7
+Timeout
+
+Use a deliberately slow/unreachable endpoint appropriate for testing.
+
+Expected:
+Timeout error.
+
+TEST 8
+Headers
+
+Send a custom header and verify it reaches the target API if the test endpoint supports inspection.
+
+TEST 9
+Bearer authentication
+
+Verify correct Authorization header construction.
+
+TEST 10
+Query parameters
+
+Example:
+
+?page=1&limit=10
+
+Verify query parameters are correctly encoded.
+
+==================================================
+PART 19 — CODE QUALITY
+==================================================
+
+Follow these rules:
+
+- TypeScript throughout where applicable.
+- Avoid unnecessary any.
+- Avoid duplicated logic.
+- Use reusable components.
+- Use reusable services.
+- Keep controllers thin.
+- Keep business logic in services.
+- Keep request validation separate.
+- Use clear naming.
+- Add comments only where they provide real value.
+- Do not over-engineer.
+- Do not create unnecessary abstractions.
+
+Use environment variables for configuration.
+
+Never hardcode secrets.
+
+==================================================
+PART 20 — ENVIRONMENT CONFIGURATION
+==================================================
+
+Create/update environment configuration appropriately.
+
+For example:
+
+Frontend:
+
+VITE_API_BASE_URL=http://localhost:<backend-port>
+
+Backend:
+
+PORT=<backend-port>
+REQUEST_TIMEOUT=30000
+
+Use the project's existing environment naming conventions if they already exist.
+
+Make sure .env files containing secrets are not committed.
+
+Update .gitignore if required.
+
+Provide a .env.example where appropriate.
+
+==================================================
+PART 21 — DEVELOPMENT COMMANDS
+==================================================
+
+After implementation, ensure the project can be started easily.
+
+Ideally:
+
+npm install
+
+and then:
+
+npm run dev
+
+or, if frontend and backend are separate:
+
+npm run dev
+
+should start both services if the current architecture supports it.
+
+If separate commands are required, document them clearly.
+
+Do NOT break existing scripts.
+
+==================================================
+PART 22 — DO NOT IMPLEMENT YET
+==================================================
+
+Do NOT implement the following as part of Phase 2 unless they are already partially implemented and required for integration:
+
+- AI Assistant
+- AI Test Generator
+- AI Diagnosis
+- OpenAPI parsing
+- Automatic test generation
+- Automated test suites
+- Response schema validation
+- Mock Server
+- Advanced Collections
+- OAuth flows
+- WebSockets
+- GraphQL
+- Performance/load testing
+- Full user authentication
+- Production deployment
+- Advanced reporting
+
+These belong to later phases.
+
+The goal is to make the fundamental API request/response pipeline reliable first.
+
+==================================================
+EXPECTED FINAL ARCHITECTURE
+==================================================
+
+The architecture should roughly follow:
+
+                 APIForge Frontend
+                       │
+                       ▼
+                Request Builder
+                       │
+                       ▼
+              Frontend API Service
+                       │
+                       ▼
+             POST /api/requests/execute
+                       │
+                       ▼
+                Backend Controller
+                       │
+                       ▼
+                 Request Service
+                       │
+                       ▼
+                 HTTP Client
+                       │
+                       ▼
+                  Target API
+                       │
+                       ▼
+                HTTP Response
+                       │
+                       ▼
+                 Request Service
+                       │
+                       ▼
+                Backend Response
+                       │
+                       ▼
+              Frontend Response Viewer
+
+
+Keep the layers separated so that future phases can plug into the execution engine.
+
+==================================================
+FUTURE COMPATIBILITY
+==================================================
+
+Design the execution engine so that later we can do:
+
+OpenAPI
+   ↓
+Test Generator
+   ↓
+Generated Test Case
+   ↓
+Request Execution Engine
+   ↓
+Response
+   ↓
+Validation Engine
+   ↓
+PASS / FAIL
+   ↓
+AI Diagnosis
+
+The Phase 2 execution engine will therefore become one of the core services of APIForge.
+
+Do not design it as a one-off Request Builder implementation.
+
+It should be reusable by future automated testing.
+
+==================================================
+IMPLEMENTATION PROCESS
+==================================================
+
+Follow this exact process:
+
+STEP 1
+Inspect the repository.
+
+STEP 2
+Identify the existing architecture and conventions.
+
+STEP 3
+Create a concise implementation plan based on the actual repository.
+
+STEP 4
+Implement the Request Builder.
+
+STEP 5
+Implement/connect the backend.
+
+STEP 6
+Implement the API execution service.
+
+STEP 7
+Connect frontend and backend.
+
+STEP 8
+Implement response viewer.
+
+STEP 9
+Implement error/loading states.
+
+STEP 10
+Implement authentication options.
+
+STEP 11
+Implement query parameters, headers and body handling.
+
+STEP 12
+Integrate New Request and Request Builder navigation from Dashboard.
+
+STEP 13
+Run lint/type checks/build.
+
+STEP 14
+Run functional tests.
+
+STEP 15
+Fix all issues you discover.
+
+STEP 16
+Review the implementation for unnecessary complexity and remove it.
+
+==================================================
+IMPORTANT BEHAVIOR
+==================================================
+
+Do NOT stop after creating UI mockups.
+
+The Send button MUST execute a real API request through the backend.
+
+Do NOT use fake/mock response data for the final implementation.
+
+Do NOT simply simulate:
+
+200 OK
+{
+  "message": "Success"
+}
+
+The application must communicate with an actual target API.
+
+Do NOT rewrite the existing Dashboard.
+
+Do NOT delete existing features.
+
+Do NOT create duplicate components when reusable components already exist.
+
+Do NOT install unnecessary dependencies.
+
+Do NOT assume a particular folder structure before inspecting the repository.
+
+Adapt your implementation to the actual project.
+
+==================================================
+DEFINITION OF DONE
+==================================================
+
+Phase 2 is considered COMPLETE only when all of the following are true:
+
+[ ] Existing Dashboard still works.
+[ ] Request Builder is accessible from the sidebar.
+[ ] New Request opens Request Builder.
+[ ] HTTP methods work.
+[ ] URL input works.
+[ ] Query parameters work.
+[ ] Headers work.
+[ ] JSON body works.
+[ ] JSON validation works.
+[ ] Bearer token works.
+[ ] API key works.
+[ ] Basic authentication works.
+[ ] Frontend communicates with backend.
+[ ] Backend executes real API requests.
+[ ] GET works.
+[ ] POST works.
+[ ] PUT works.
+[ ] PATCH works.
+[ ] DELETE works.
+[ ] Response status is displayed.
+[ ] Response time is displayed.
+[ ] Response headers are displayed.
+[ ] Response body is displayed.
+[ ] JSON responses are formatted.
+[ ] 4xx responses are handled correctly.
+[ ] 5xx responses are handled correctly.
+[ ] Network errors are handled.
+[ ] Timeout is handled.
+[ ] Loading state works.
+[ ] Invalid URL is handled.
+[ ] Invalid JSON is handled.
+[ ] Credentials are not exposed in logs.
+[ ] TypeScript/type checking passes.
+[ ] Linting passes if configured.
+[ ] Production build passes.
+[ ] No existing functionality is broken.
+[ ] Code is structured for future Test Generation and Validation phases.
+
+==================================================
+FINAL RESPONSE REQUIRED FROM YOU
+==================================================
+
+After implementation, provide a concise development report containing:
+
+1. What you changed
+2. Files created
+3. Files modified
+4. Architecture implemented
+5. Dependencies added, if any
+6. API endpoint(s) created
+7. How to run frontend/backend
+8. Tests performed
+9. Test results
+10. Any known limitations
+11. Recommended next phase
+
+Do not claim something is implemented if it was not actually implemented and tested.
+
+If something cannot be implemented because of the existing repository architecture, explain the reason and propose the smallest appropriate solution.
+
+Begin by inspecting the existing repository now.

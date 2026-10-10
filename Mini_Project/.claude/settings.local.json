@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(curl -s -X POST http://localhost:3001/api/requests/execute -H 'Content-Type: application/json' -d '{ *)",
+      "Bash(echo === TEST 16: 500 Server Error === *)",
+      "Bash(echo === TEST 17: 401 Unauthorized === *)"
+    ]
+  },
+  "enableAllProjectMcpServers": true,
+  "enabledMcpjsonServers": [
+    "claude-flow"
+  ]
+}
