@@ -2,6 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DiagnosisService } from '../src/services/diagnosis.service.js';
 import { MockAiProvider } from '../src/services/aiProvider.service.js';
+import type { AiProvider } from '../src/services/aiProvider.service.js';
+import type { SanitizedEvidence } from '../src/types/diagnosis.types.js';
 import { DiagnosisController } from '../src/controllers/diagnosis.controller.js';
 import type { TestCase } from '../src/types/testCase.types.js';
 import type { TestCaseExecutionResult } from '../src/types/testExecution.types.js';
@@ -271,6 +273,32 @@ test('10. sanitization: Authorization header is redacted from evidence', async (
   const result = await service.diagnoseSingle(makeTestCase(), exec, makeValidationResult());
   assert.ok(result, 'Should complete without throwing');
   assert.equal(result.validationStatus, 'VALIDATION_PASSED');
+});
+
+test('10a. sanitization: JSON body and failed assertion secrets are redacted before provider use', async () => {
+  let evidence: SanitizedEvidence | undefined;
+  const provider: AiProvider = {
+    name: 'mock',
+    async diagnose(input) {
+      evidence = input;
+      return { confidence: 'HIGH', summary: 'ok', findings: [] };
+    },
+  };
+  const secret = 'diagnosis-regression-secret';
+  const service = new DiagnosisService(provider);
+  const execution = makeExecutionResult({
+    response: { status: 400, statusText: 'Bad Request', responseTime: 1, headers: {}, body: { token: secret }, size: 1 },
+  });
+  const validation = makeValidationResult({
+    status: 'VALIDATION_FAILED',
+    summary: { totalAssertions: 1, passedAssertions: 0, failedAssertions: 1 },
+    assertions: [{ id: 'a', category: 'SCHEMA_PATTERN', path: '$.token', expected: `token: ${secret}`, actual: `{"token":"${secret}"}`, passed: false, message: `password=${secret}` }],
+  });
+  await service.diagnoseSingle(makeTestCase(), execution, validation);
+  const serialized = JSON.stringify(evidence);
+  assert.ok(evidence);
+  assert.equal(serialized.includes(secret), false);
+  assert.match(serialized, /\[REDACTED\]/);
 });
 
 // ---------------------------------------------------------------------------

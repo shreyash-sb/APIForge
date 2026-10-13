@@ -1,319 +1,137 @@
-# APIForge - Phase 2 Complete
+# APIForge
 
-## Overview
+APIForge is an academic API-development and API-testing application. It provides a React interface and an Express backend for importing OpenAPI documents, generating deterministic tests, executing and validating requests, running workflows, diagnosing failures, reporting results, and hosting local mock routes.
 
-APIForge is an API development and intelligent API testing platform. Phase 2 implements the complete Request Builder with backend execution engine.
+## Implemented capabilities
 
-## Project Structure
+- Request Builder with HTTP methods, headers, query parameters, JSON bodies, and bearer/API-key/basic authentication.
+- OpenAPI 3.0, OpenAPI 3.1, and Swagger 2.0 import and normalization; external references are rejected.
+- Deterministic test generation and execution. An HTTP 4xx/5xx response is a completed transport execution; contract validation separately decides whether it passes.
+- Contract validation for status, headers, content type, schemas, constraints, composition, and references.
+- Advisory AI diagnosis with a deterministic `mock` provider fallback; it never changes validation outcomes.
+- Reports, workflow variables/extraction/chaining/teardown, local environments, mock routes, and bounded traffic inspection.
+- Headless CLI with console, JUnit XML, and self-contained HTML reports.
 
-```
-Mini_Project/
-├── Frontend/              # React + TypeScript + Vite
-│   ├── src/
-│   │   ├── components/   # UI components
-│   │   ├── pages/        # Page components
-│   │   ├── services/     # API services
-│   │   ├── types/        # TypeScript types
-│   │   └── ...
-│   ├── package.json
-│   └── vite.config.ts
-│
-└── Backend/              # Node.js + Express + TypeScript
-    ├── src/
-    │   ├── controllers/  # Request controllers
-    │   ├── routes/       # API routes
-    │   ├── services/     # Business logic
-    │   ├── types/        # TypeScript types
-    │   ├── middleware/   # Express middleware
-    │   └── index.ts      # Server entry point
-    ├── package.json
-    └── tsconfig.json
-```
+## Prerequisites
 
-## Features Implemented
-
-### Request Builder UI
-- ✅ HTTP method selector (GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS)
-- ✅ URL input with validation
-- ✅ Query parameters (add, edit, remove, enable/disable)
-- ✅ Custom headers (add, edit, remove, enable/disable)
-- ✅ Authentication support:
-  - No Auth
-  - Bearer Token
-  - API Key (header or query parameter)
-  - Basic Auth
-- ✅ JSON body editor with validation
-- ✅ Send button with loading state
-
-### Response Viewer
-- ✅ HTTP status display with color coding
-- ✅ Response time in milliseconds
-- ✅ Response size
-- ✅ Response body (formatted JSON)
-- ✅ Response headers viewer
-- ✅ Tabbed interface (Body/Headers)
-
-### Backend API
-- ✅ POST `/api/requests/execute` endpoint
-- ✅ Request execution service
-- ✅ Full HTTP method support
-- ✅ Query parameter handling
-- ✅ Custom headers support
-- ✅ Authentication injection (Bearer, API Key, Basic)
-- ✅ 30-second timeout
-- ✅ Comprehensive error handling
-- ✅ CORS enabled for development
-
-### Error Handling
-- ✅ Invalid URL validation
-- ✅ JSON body validation
-- ✅ Network errors (DNS, connection refused, timeout)
-- ✅ HTTP error responses (4xx, 5xx)
-- ✅ SSL/TLS errors
-- ✅ Timeout errors
-- ✅ User-friendly error messages
-
-## Setup Instructions
-
-### Prerequisites
-- Node.js (v18 or higher)
+- Node.js 18 or newer (Node 20+ recommended)
 - npm
+- Two terminals for the frontend and backend during interactive use
 
-### Backend Setup
+## Install and configure
 
-1. Navigate to backend directory:
+Install dependencies separately; there is no root workspace script.
+
 ```bash
 cd Backend
-```
-
-2. Install dependencies:
-```bash
 npm install
-```
+cp .env.example .env
 
-3. Create `.env` file (copy from `.env.example`):
-```bash
+cd ../Frontend
+npm install
 cp .env.example .env
 ```
 
-4. Start the development server:
-```bash
-npm run dev
+Never commit either `.env` file. The checked-in `.env.example` files contain placeholders/defaults only.
+
+### Environment settings
+
+Backend (`Backend/.env`):
+
+- `PORT=3001` — backend listen port.
+- `REQUEST_TIMEOUT=30000` — outbound request timeout in milliseconds. Invalid values safely fall back to 30 seconds; the maximum is 120 seconds.
+- `OUTBOUND_REQUEST_SAFE_MODE=false` — use `true` outside controlled local development. It rejects obvious loopback, private, link-local, and metadata-service IP-literal targets.
+- `AI_PROVIDER=mock` — the default requires no paid provider. Set `google-gemini` plus a separately supplied `GEMINI_API_KEY` only when external AI diagnosis is desired.
+
+Frontend (`Frontend/.env`):
+
+```dotenv
+VITE_API_BASE_URL=http://localhost:3001
 ```
 
-Backend will run on `http://localhost:3001`
+Safe mode is an important defense-in-depth control, not a complete SSRF solution: it does not prevent hostname DNS rebinding. Keep the backend and mock-management endpoints on a trusted network until access controls are available.
 
-### Frontend Setup
+## Start locally
 
-1. Navigate to frontend directory:
-```bash
-cd Frontend
-```
+Terminal 1:
 
-2. Install dependencies (if not already installed):
-```bash
-npm install
-```
-
-3. Create `.env` file (copy from `.env.example`):
-```bash
-cp .env.example .env
-```
-
-4. Start the development server:
-```bash
-npm run dev
-```
-
-Frontend will run on `http://localhost:5173`
-
-### Running Both Servers
-
-Open two terminal windows:
-
-**Terminal 1 (Backend):**
 ```bash
 cd Backend
 npm run dev
 ```
 
-**Terminal 2 (Frontend):**
+Terminal 2:
+
 ```bash
 cd Frontend
 npm run dev
 ```
 
-## Usage
+Open `http://localhost:5173`. The backend health endpoint is `http://localhost:3001/health`.
 
-1. Open your browser to `http://localhost:5173`
-2. Navigate to "Request Builder" from the sidebar
-3. Configure your API request:
-   - Select HTTP method
-   - Enter URL
-   - Add query parameters (optional)
-   - Add headers (optional)
-   - Configure authentication (optional)
-   - Add request body for POST/PUT/PATCH (optional)
-4. Click "Send"
-5. View the response
+For a compiled backend:
 
-## Test Results
-
-All 10 required tests passed:
-
-✅ **TEST 1**: GET request - Single user fetch (200 OK)
-✅ **TEST 2**: GET request - Collection fetch (200 OK, 10 items)
-✅ **TEST 3**: POST request - JSON body (201 Created)
-✅ **TEST 4**: 404 handling - Invalid endpoint (404 Not Found)
-✅ **TEST 5**: Malformed JSON - Validation error before sending
-✅ **TEST 6**: Invalid URL - Validation error
-✅ **TEST 7**: Timeout - Proper timeout error
-✅ **TEST 8**: Custom headers - Headers sent correctly
-✅ **TEST 9**: Bearer authentication - Authorization header added
-✅ **TEST 10**: Query parameters - Properly encoded
-
-Additional tests passed:
-✅ PUT request (200 OK)
-✅ PATCH request (200 OK)
-✅ DELETE request (200 OK)
-✅ Basic authentication
-✅ API Key authentication
-
-## API Documentation
-
-### POST /api/requests/execute
-
-Execute an API request through the backend proxy.
-
-**Request Body:**
-```json
-{
-  "method": "GET",
-  "url": "https://api.example.com/users",
-  "queryParams": [
-    {"key": "page", "value": "1", "enabled": true}
-  ],
-  "headers": [
-    {"key": "Content-Type", "value": "application/json", "enabled": true}
-  ],
-  "body": null,
-  "auth": {
-    "type": "bearer",
-    "token": "your-token-here"
-  }
-}
-```
-
-**Success Response:**
-```json
-{
-  "success": true,
-  "status": 200,
-  "statusText": "OK",
-  "responseTime": 184,
-  "headers": {
-    "content-type": "application/json"
-  },
-  "body": {},
-  "size": 1234
-}
-```
-
-**Error Response:**
-```json
-{
-  "success": false,
-  "error": {
-    "type": "NETWORK_ERROR",
-    "message": "Connection refused",
-    "details": "..."
-  }
-}
-```
-
-## Security Notes
-
-- Only HTTP and HTTPS protocols are allowed
-- URLs are validated server-side
-- Authentication credentials are not logged
-- Request body size limited to 10MB
-- 30-second timeout prevents hanging requests
-- CORS configured for development (localhost origins)
-
-## Known Limitations
-
-- History persistence not yet implemented (foundation in place)
-- No database integration yet
-- No collection management yet
-- No OAuth flows yet
-- No WebSocket support yet
-- No GraphQL support yet
-
-## Next Phase Recommendations
-
-### Phase 3: History & Collections
-- Implement request history with local storage or database
-- Add collections management
-- Add request saving functionality
-- Add history search and filtering
-
-### Phase 4: Advanced Features
-- OpenAPI import and parsing
-- Automated test generation from OpenAPI specs
-- Response schema validation
-- Mock server implementation
-
-### Phase 5: AI Integration
-- AI-powered error diagnosis
-- Intelligent test case generation
-- Automatic documentation generation
-- JSON payload generation
-
-## Dependencies
-
-### Frontend
-- React 19
-- TypeScript 5
-- Vite 7
-- Axios (for HTTP requests)
-- React Router DOM (for routing)
-- Tailwind CSS (for styling)
-- Zustand (for state management)
-- Lucide React (for icons)
-
-### Backend
-- Node.js
-- Express 4
-- TypeScript 5
-- Axios (for HTTP client)
-- CORS (for CORS handling)
-- tsx (for TypeScript execution)
-
-## Build for Production
-
-### Frontend
-```bash
-cd Frontend
-npm run build
-```
-Output: `Frontend/dist/`
-
-### Backend
 ```bash
 cd Backend
 npm run build
-```
-Output: `Backend/dist/`
-
-Start production server:
-```bash
 npm start
 ```
 
-## Contributing
+For a frontend production preview:
 
-This is an academic project. Follow the existing code structure and conventions when making changes.
+```bash
+cd Frontend
+npm run build
+npm run preview
+```
 
-## License
+## Demonstration flow
 
-Academic project - WCE 3rd Year 5th Semester Mini Project
+Use the application with `AI_PROVIDER=mock`; no external credential is needed.
+
+1. Start backend and frontend, then confirm `/health` returns JSON with `status: "ok"`.
+2. In **OpenAPI**, import `Backend/test/fixtures/openapi3.json`.
+3. In **AI Test Generator**, generate deterministic tests from the imported endpoints.
+4. In **Mock Server**, use a seeded route or create a safe local route. Send it through **Request Builder** using `http://localhost:3001/api/mock/serve/...`.
+5. Execute a generated test and inspect its distinct execution and validation states.
+6. Configure an intentionally wrong expected status or schema to demonstrate a validation failure; run **AI Diagnosis**. With the mock provider, the diagnosis remains deterministic and advisory.
+7. Generate a report and inspect the endpoint/failure breakdown. Do not save reports that contain sensitive real data to source control.
+8. In **Workflows**, run the seeded login/profile/teardown flow against the Mock Server to demonstrate extraction, substitution, dependency blocking, and teardown.
+9. Return to **Mock Server** and inspect the traffic log; sensitive fields are redacted and retained logs are bounded.
+10. In a terminal, run the CLI smoke suite below.
+
+This is an API-level demonstration procedure. Browser-based end-to-end automation has not been completed.
+
+## CLI
+
+From `Backend` after building:
+
+```bash
+node dist/cli/index.js run-suite test/fixtures/smoke-suite.json --reporter console
+node dist/cli/index.js run-suite test/fixtures/smoke-suite.json --reporter junit --output reports/results.junit.xml
+node dist/cli/index.js run-suite test/fixtures/smoke-suite.json --reporter html --output reports/results.report.html
+```
+
+Start the backend on port 3001 before using the smoke-suite fixture. The CLI supports `run-suite` and `run-workflow`; see [CLI.md](CLI.md) for the formats, flags, and exit codes. Console is the default reporter; JUnit and HTML require `--output`.
+
+## Verification commands
+
+```bash
+cd Backend && npm test && npm run lint && npm run build
+# Keep the backend running on port 3001 for Frontend integration tests.
+cd Frontend && npm test && npm run lint && npm run build
+```
+
+The frontend suite includes cross-feature integration tests that call the live backend on port 3001; start the backend first when running the frontend test command.
+
+## Troubleshooting
+
+- **Frontend cannot reach backend:** confirm both ports, `VITE_API_BASE_URL`, and restart Vite after changing its `.env`.
+- **Request blocked by policy:** use only deliberate local targets during development, or review `OUTBOUND_REQUEST_SAFE_MODE`; keep it `true` in non-local environments.
+- **AI provider unavailable:** leave `AI_PROVIDER=mock` for the complete deterministic fallback.
+- **CLI smoke suite fails:** ensure backend is listening on port 3001, or use a suite fixture whose URLs match your selected port.
+- **Browser shows old state:** use the workspace reset control; corrupted or unavailable browser storage is handled defensively.
+
+## Limitations and future scope
+
+This is suitable for a responsible academic demonstration, not a production deployment. There is no authentication or authorization for backend/mock-management endpoints, no database, no CI/CD pipeline, no load testing, and no completed browser E2E suite. Do not expose it to untrusted networks. DNS-rebinding protection and connection-time network enforcement remain deployment/network responsibilities.

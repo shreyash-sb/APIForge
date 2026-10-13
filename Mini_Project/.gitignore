@@ -1,0 +1,25 @@
+# Dependencies and build output
+node_modules/
+Backend/node_modules/
+Frontend/node_modules/
+Backend/dist/
+Frontend/dist/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+Backend/.env
+Frontend/.env
+
+# Generated logs and reports may contain request/response data
+*.log
+reports/
+Backend/reports/
+Frontend/reports/
+*.junit.xml
+*.report.html
+
+# Local/editor artifacts
+.DS_Store
+*.tsbuildinfo

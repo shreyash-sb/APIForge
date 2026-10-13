@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, ChevronRight, FileCode2, FileUp, Loader2, Send, ShieldCheck, UploadCloud, XCircle } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
@@ -34,14 +34,57 @@ function authFromEndpoint(endpoint: ApiEndpoint, schemes: Record<string, ApiSecu
 }
 
 export function OpenAPIPage() {
-  const inputRef = useRef<HTMLInputElement>(null); const navigate = useNavigate(); const setRequestDraft = useAppStore((state) => state.setRequestDraft); const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
-  const [file, setFile] = useState<File>(); const [specification, setSpecification] = useState<ApiSpecification>(); const [selectedEndpointId, setSelectedEndpointId] = useState<string>();
-  const [error, setError] = useState<string>(); const [errorDetails, setErrorDetails] = useState<string[]>(); const [loading, setLoading] = useState(false); const [dragging, setDragging] = useState(false);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const navigate = useNavigate();
+  const setRequestDraft = useAppStore((state) => state.setRequestDraft);
+  const activeSpecification = useAppStore((state) => state.activeSpecification);
+  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
+  const [file, setFile] = useState<File>();
+  const [specification, setSpecification] = useState<ApiSpecification | undefined>(() => activeSpecification);
+  const [selectedEndpointId, setSelectedEndpointId] = useState<string | undefined>(
+    () => activeSpecification?.endpoints[0]?.id
+  );
+  const [error, setError] = useState<string>();
+  const [errorDetails, setErrorDetails] = useState<string[]>();
+  const [loading, setLoading] = useState(false);
+  const [dragging, setDragging] = useState(false);
+
+  useEffect(() => {
+    setSpecification(activeSpecification);
+    if (!selectedEndpointId && activeSpecification?.endpoints[0]?.id) {
+      setSelectedEndpointId(activeSpecification.endpoints[0].id);
+    } else if (!activeSpecification) {
+      setSelectedEndpointId(undefined);
+    }
+  }, [activeSpecification, selectedEndpointId]);
   const selectedEndpoint = specification?.endpoints.find((endpoint) => endpoint.id === selectedEndpointId);
   const selectFile = (candidate?: File) => { setError(undefined); setErrorDetails(undefined); setSpecification(undefined); setSelectedEndpointId(undefined); if (!candidate) return; const extension = `.${candidate.name.split('.').pop()?.toLowerCase()}`; if (!ACCEPTED_TYPES.includes(extension)) { setFile(undefined); setError('Unsupported file type. Select a .json, .yaml, or .yml specification.'); return; } if (candidate.size === 0) { setFile(undefined); setError('The selected file is empty.'); return; } setFile(candidate); };
-  const importFile = async () => { if (!file) return; setLoading(true); setError(undefined); setErrorDetails(undefined); const result = await openApiService.importSpecification(file.name, await file.text()); setLoading(false); if (result.success) { setSpecification(result.specification); setActiveSpecification(result.specification); setSelectedEndpointId(result.specification.endpoints[0]?.id); } else { setSpecification(undefined); setError(result.error.message); setErrorDetails(result.error.details); } };
+  const importFile = async () => {
+    if (!file) return;
+    setLoading(true);
+    setError(undefined);
+    setErrorDetails(undefined);
+    try {
+      const content = await file.text();
+      const result = await openApiService.importSpecification(file.name, content);
+      if (result.success) {
+        setSpecification(result.specification);
+        setActiveSpecification(result.specification);
+        setSelectedEndpointId(result.specification.endpoints[0]?.id);
+      } else {
+        setSpecification(undefined);
+        setError(result.error.message);
+        setErrorDetails(result.error.details);
+      }
+    } catch (err: unknown) {
+      setSpecification(undefined);
+      setError(err instanceof Error ? err.message : 'Failed to import specification.');
+    } finally {
+      setLoading(false);
+    }
+  };
   const openInBuilder = (endpoint: ApiEndpoint) => { const server = specification?.servers[0]?.url ?? ''; const queryParams: QueryParam[] = endpoint.parameters.filter((parameter) => parameter.location === 'query').map((parameter) => ({ id: crypto.randomUUID(), key: parameter.name, value: String(parameter.example ?? parameter.default ?? ''), enabled: true })); const headers: Header[] = endpoint.parameters.filter((parameter) => parameter.location === 'header').map((parameter) => ({ id: crypto.randomUUID(), key: parameter.name, value: String(parameter.example ?? parameter.default ?? ''), enabled: true })); const content = endpoint.requestBody?.content.find((item) => item.contentType === 'application/json') ?? endpoint.requestBody?.content[0]; if (content?.contentType) headers.unshift({ id: crypto.randomUUID(), key: 'Content-Type', value: content.contentType, enabled: true }); const example = firstExample(content); setRequestDraft({ method: endpoint.method as HttpMethod, url: `${server.replace(/\/$/, '')}${endpoint.path}`, queryParams, headers, body: example === undefined ? '' : JSON.stringify(example, null, 2), auth: authFromEndpoint(endpoint, specification?.securitySchemes ?? {}) }); navigate('/request-builder'); };
-  if (specification) return <Explorer specification={specification} selectedEndpoint={selectedEndpoint} onSelect={setSelectedEndpointId} onOpen={openInBuilder} onReset={() => { setSpecification(undefined); setFile(undefined); setSelectedEndpointId(undefined); }} />;
+  if (specification) return <Explorer specification={specification} selectedEndpoint={selectedEndpoint} onSelect={setSelectedEndpointId} onOpen={openInBuilder} onReset={() => { setSpecification(undefined); setActiveSpecification(undefined); setFile(undefined); setSelectedEndpointId(undefined); }} />;
   return <div className="mx-auto max-w-4xl space-y-6"><section className="panel-surface p-6 sm:p-8"><div className="flex items-start gap-4"><div className="rounded-xl bg-sky-100 p-3 text-sky-700"><FileCode2 className="h-6 w-6" /></div><div><h2 className="text-2xl font-semibold text-slate-950">Import an API specification</h2><p className="mt-2 text-sm leading-6 text-slate-500">Upload an OpenAPI 3.0/3.1 or Swagger 2.0 JSON or YAML file. APIForge processes the file through your backend; external references are intentionally blocked.</p></div></div></section><section className="panel-surface p-6 sm:p-8"><input ref={inputRef} type="file" accept=".json,.yaml,.yml,application/json,application/yaml,text/yaml" className="hidden" onChange={(event) => selectFile(event.target.files?.[0])} /><button type="button" onClick={() => inputRef.current?.click()} onDragOver={(event) => { event.preventDefault(); setDragging(true); }} onDragLeave={() => setDragging(false)} onDrop={(event) => { event.preventDefault(); setDragging(false); selectFile(event.dataTransfer.files[0]); }} className={`flex w-full flex-col items-center rounded-xl border-2 border-dashed px-6 py-12 text-center transition-colors ${dragging ? 'border-primary bg-sky-50' : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'}`}><UploadCloud className="h-10 w-10 text-slate-400" /><p className="mt-4 font-semibold text-slate-800">Drop your specification here, or choose a file</p><p className="mt-1 text-sm text-slate-500">JSON, YAML, or YML · OpenAPI 3.0/3.1 · Swagger 2.0</p></button>{file && <div className="mt-5 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 p-4"><div className="flex min-w-0 items-center gap-3"><FileCode2 className="h-5 w-5 shrink-0 text-sky-700" /><div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-800">{file.name}</p><p className="text-xs text-slate-500">{file.type || file.name.split('.').pop()?.toUpperCase()} · {formatSize(file.size)}</p></div></div><Button onClick={importFile} disabled={loading}>{loading ? <><Loader2 className="h-4 w-4 animate-spin" />Parsing</> : <><FileUp className="h-4 w-4" />Import</>}</Button></div>}{error && <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-800"><div className="flex items-center gap-2 font-semibold"><XCircle className="h-4 w-4" />{error}</div>{errorDetails?.length ? <ul className="mt-2 list-disc space-y-1 pl-5 text-xs">{errorDetails.map((detail) => <li key={detail}>{detail}</li>)}</ul> : null}</div>}</section></div>;
 }
 

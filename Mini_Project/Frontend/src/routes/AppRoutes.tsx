@@ -15,6 +15,7 @@ import { RequestBuilderPage } from "@/pages/RequestBuilder/RequestBuilderPage";
 import { ResponseValidationPage } from "@/pages/ResponseValidation/ResponseValidationPage";
 import { SettingsPage } from "@/pages/Settings/SettingsPage";
 import { ReportsPage } from "@/pages/Reports/ReportsPage";
+import { WorkflowsPage } from "@/pages/Workflows/WorkflowsPage";
 
 export function AppRoutes() {
   return (
@@ -23,6 +24,7 @@ export function AppRoutes() {
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/collections" element={<CollectionsPage />} />
+        <Route path="/workflows" element={<WorkflowsPage />} />
         <Route path="/request-builder" element={<RequestBuilderPage />} />
         <Route path="/history" element={<HistoryPage />} />
         <Route path="/environments" element={<EnvironmentsPage />} />

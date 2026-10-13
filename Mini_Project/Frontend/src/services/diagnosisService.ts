@@ -7,8 +7,12 @@ import type {
   DiagnoseBatchResult,
   DiagnosisResult,
 } from '@/types/diagnosis.types';
+import { formatApiErrorMessage } from './apiError';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
+  'http://localhost:3001';
 
 export class DiagnosisApiError extends Error {
   public statusCode?: number;
@@ -37,10 +41,7 @@ export const diagnosisService = {
       return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        const message =
-          (error.response?.data as { error?: { message?: string } })?.error?.message ||
-          error.message ||
-          'AI diagnosis request failed.';
+        const message = formatApiErrorMessage(error, 'AI diagnosis request failed.');
         throw new DiagnosisApiError(message, error.response?.status, error.response?.data);
       }
       throw new DiagnosisApiError(
@@ -59,10 +60,7 @@ export const diagnosisService = {
       return response.data;
     } catch (error: unknown) {
       if (axios.isAxiosError(error)) {
-        const message =
-          (error.response?.data as { error?: { message?: string } })?.error?.message ||
-          error.message ||
-          'AI batch diagnosis request failed.';
+        const message = formatApiErrorMessage(error, 'AI batch diagnosis request failed.');
         throw new DiagnosisApiError(message, error.response?.status, error.response?.data);
       }
       throw new DiagnosisApiError(

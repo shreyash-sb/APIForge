@@ -69,3 +69,15 @@ export interface ApiErrorResponse {
 }
 
 export type ApiExecutionResult = ApiResponse | ApiErrorResponse;
+
+/** Metadata-only history for requests sent from Request Builder. Never contains bodies, headers, auth, or hosts. */
+export interface ManualRequestExecution {
+  id: string;
+  method: HttpMethod;
+  endpoint: string;
+  completedAt: string;
+  durationMs: number;
+  status: 'HTTP_RESPONSE' | 'TRANSPORT_FAILURE' | 'REQUEST_VALIDATION_FAILURE';
+  httpStatus?: number;
+  errorType?: ApiErrorResponse['error']['type'];
+}

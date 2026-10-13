@@ -1,13 +1,14 @@
-import { History } from "lucide-react";
-
-import { PlaceholderPage } from "@/pages/common/PlaceholderPage";
+import { Link } from "react-router-dom";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { useAppStore } from "@/store/useAppStore";
+import { getHistoryItems, type HistoryItem } from "@/lib/historyData";
 
 export function HistoryPage() {
-  return (
-    <PlaceholderPage
-      title="History"
-      description="Review previous requests, compare responses, and keep debugging context close at hand."
-      icon={History}
-    />
-  );
+  const { executionResults, workflowExecutionResult, manualRequestExecutions } = useAppStore();
+  const [search, setSearch] = useState(''); const [type, setType] = useState('All'); const [status, setStatus] = useState('All'); const [selected, setSelected] = useState<HistoryItem>();
+  const items = useMemo(() => getHistoryItems(executionResults, workflowExecutionResult, manualRequestExecutions), [executionResults, workflowExecutionResult, manualRequestExecutions]);
+  const filtered = items.filter((item) => (type === 'All' || item.type === type) && (status === 'All' || item.status === status) && `${item.method} ${item.endpoint}`.toLowerCase().includes(search.toLowerCase()));
+  return <div className="space-y-6"><section className="panel-surface p-6"><div className="flex justify-between gap-3"><div><h1 className="text-2xl font-semibold text-slate-950">History</h1><p className="mt-2 text-sm text-slate-500">Recorded, redacted execution metadata. Full request configuration is not retained for replay.</p></div><Link to="/request-builder"><Button>Request Builder</Button></Link></div><div className="mt-5 grid gap-2 md:grid-cols-3"><Input aria-label="Search history" placeholder="Search method or endpoint" value={search} onChange={(e) => setSearch(e.target.value)} /><select aria-label="Execution type" value={type} onChange={(e) => setType(e.target.value)}><option>All</option><option>Manual request</option><option>Generated test</option><option>Workflow step</option></select><select aria-label="Execution status" value={status} onChange={(e) => setStatus(e.target.value)}><option>All</option>{[...new Set(items.map((item) => item.status))].map((value) => <option key={value}>{value}</option>)}</select></div></section>{!items.length ? <section className="panel-surface p-8 text-center text-sm text-slate-500">No recorded executions yet.</section> : <section className="panel-surface overflow-x-auto p-5"><table className="min-w-full text-sm"><thead><tr className="text-left text-slate-400"><th>Method</th><th>Endpoint</th><th>Type</th><th>Status</th><th>Duration</th><th>Timestamp</th><th /></tr></thead><tbody>{filtered.map((item) => <tr key={item.id} className="border-t"><td className="py-3">{item.method}</td><td>{item.endpoint}</td><td>{item.type}</td><td>{item.httpStatus ?? item.status}</td><td>{item.durationMs} ms</td><td>{new Date(item.timestamp).toLocaleString()}</td><td><Button size="sm" variant="outline" onClick={() => setSelected(item)}>Details</Button></td></tr>)}</tbody></table>{!filtered.length && <p className="py-8 text-center text-sm text-slate-500">No history matches these filters.</p>}</section>}{selected && <section className="panel-surface p-5"><h2 className="font-semibold">Safe diagnostic details</h2><dl className="mt-3 grid gap-2 text-sm"><div>Type: {selected.type}</div><div>Endpoint: {selected.endpoint}</div><div>Status: {selected.httpStatus ?? selected.status}</div><div>Validation: {selected.validationStatus ?? 'Not recorded'}</div><div>Diagnostic: {selected.error ?? 'No diagnostic recorded'}</div></dl><p className="mt-3 text-xs text-slate-500">Headers, bodies, credentials, and hosts are intentionally unavailable; this record cannot be replayed safely.</p></section>}</div>;
 }

@@ -1,10 +1,11 @@
-import { ArrowRight, Download, Plus } from "lucide-react";
+import { ArrowRight, Download, Loader2, Plus, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { AIAssistantCard } from "@/components/dashboard/AIAssistantCard";
 import { ApiActivityChart } from "@/components/dashboard/ApiActivityChart";
-import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { HealthStatus } from "@/components/dashboard/HealthStatus";
+import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { QuickActionCard } from "@/components/dashboard/QuickActionCard";
 import { RequestTable } from "@/components/dashboard/RequestTable";
 import { StatCard } from "@/components/dashboard/StatCard";
@@ -13,22 +14,21 @@ import { buttonVariants } from "@/components/ui/button";
 import { useAppStore } from "@/store/useAppStore";
 import {
   aiAssistantActions,
-  apiActivity,
-  apiHealth,
-  collections,
   quickActions,
-  recentRequests,
 } from "@/data/mockData";
+import { getActivity, getDashboardStats, getExecutionEvents, getRecentRequests } from "@/lib/dashboardData";
+import { checkBackendHealth, type HealthCheck } from "@/services/healthService";
 
 export function DashboardPage() {
-  const reportSummary = useAppStore((state) => state.reportSummary);
-  const generatedTests = useAppStore((state) => state.generatedTests);
-  const liveStats = reportSummary ? [
-    { title: "Current-run Tests", value: String(reportSummary.execution.totalTests), change: `${reportSummary.execution.executedTests} executed`, trend: "up" as const, tone: "primary" as const },
-    { title: "Execution Pass", value: reportSummary.execution.passRate === null ? "—" : `${reportSummary.execution.passRate}%`, change: `${reportSummary.execution.failedExecution + reportSummary.execution.errors} execution issues`, trend: "up" as const, tone: "success" as const },
-    { title: "Validation Failures", value: String(reportSummary.validation.validationFailed), change: `${reportSummary.validation.failedAssertions} failed assertions`, trend: "down" as const, tone: "warning" as const },
-    { title: "AI Findings", value: String(reportSummary.diagnosis.totalFindings), change: `${reportSummary.diagnosis.diagnosedTests} tests diagnosed`, trend: "up" as const, tone: "ai" as const },
-  ] : [];
+  const { generatedTests, executionResults, validationResults, diagnosisResults, workflowExecutionResult, manualRequestExecutions, collections } = useAppStore();
+  const [health, setHealth] = useState<HealthCheck | null>(null);
+  const [healthLoading, setHealthLoading] = useState(true);
+  const refreshHealth = async () => { setHealthLoading(true); setHealth(await checkBackendHealth()); setHealthLoading(false); };
+  useEffect(() => { void refreshHealth(); }, []);
+  const events = getExecutionEvents(executionResults, workflowExecutionResult, manualRequestExecutions);
+  const liveStats = getDashboardStats(executionResults, validationResults, diagnosisResults);
+  const activity = getActivity(events);
+  const recentRequests = getRecentRequests(events);
   return (
     <div className="space-y-6">
       <section className="panel-surface overflow-hidden p-6 lg:p-8">
@@ -39,7 +39,7 @@ export function DashboardPage() {
               Control Center
             </div>
             <h2 className="mt-4 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">Good morning, Developer 👋</h2>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">{reportSummary ? "Current-run metrics are live. Open the full report for endpoint and failure analysis." : generatedTests.length ? "Run and validate generated tests, then generate a current-run report." : "Import an OpenAPI specification and run tests to generate analytics."}</p>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-500 sm:text-base">{events.length ? "Activity and request history include recorded tests, workflows, and Request Builder requests. Test metrics remain test-only." : generatedTests.length ? "Run and validate generated tests to populate workspace metrics." : "Import an OpenAPI specification or send a request to begin."}</p>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row">
             <Link to="/request-builder" className={buttonVariants({ size: "lg" })}>
@@ -50,12 +50,12 @@ export function DashboardPage() {
               <Download className="h-4 w-4" />
               Import OpenAPI
             </Link>
-            {reportSummary ? <Link to="/reports" className={buttonVariants({ variant: "outline", size: "lg" })}>View Full Report<ArrowRight className="h-4 w-4" /></Link> : null}
+            {events.length ? <Link to="/reports" className={buttonVariants({ variant: "outline", size: "lg" })}>View Full Report<ArrowRight className="h-4 w-4" /></Link> : null}
           </div>
         </div>
       </section>
 
-      {liveStats.length ? <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{liveStats.map((stat) => <StatCard key={stat.title} {...stat} />)}</section> : <section className="panel-surface p-6"><p className="text-sm font-semibold text-slate-900">No current-run analytics yet</p><p className="mt-1 text-sm text-slate-500">Metrics appear here after you generate a report from the current test run.</p>{generatedTests.length ? <Link to="/reports" className={buttonVariants({ variant: "outline", className: "mt-4" })}>Generate Report<ArrowRight className="h-4 w-4" /></Link> : <Link to="/openapi" className={buttonVariants({ variant: "outline", className: "mt-4" })}>Import OpenAPI<Download className="h-4 w-4" /></Link>}</section>}
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">{liveStats.map((stat) => <StatCard key={stat.title} {...stat} />)}</section>
 
       <section className="space-y-4">
         <SectionHeader
@@ -73,20 +73,21 @@ export function DashboardPage() {
         <div className="panel-surface p-6">
           <SectionHeader
             title="API Activity"
-            description="Requests and errors across the last seven days."
+            description="Recorded tests, workflows, and Request Builder requests in the last seven days. HTTP errors and transport failures are separate."
           />
           <div className="mt-6">
-            <ApiActivityChart data={apiActivity} />
+            <ApiActivityChart data={activity} />
           </div>
         </div>
 
         <div className="panel-surface p-6">
           <SectionHeader
             title="API Health"
-            description="Current service stability and response behavior."
+            description="Explicit APIForge backend health check; ordinary API requests do not imply service health."
+            action={<button className="text-sm text-sky-700" onClick={() => void refreshHealth()} disabled={healthLoading}>{healthLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}</button>}
           />
           <div className="mt-6">
-            <HealthStatus items={apiHealth} />
+            {healthLoading ? <p className="text-sm text-slate-500">Checking APIForge backend…</p> : <><HealthStatus items={[{ service: 'APIForge backend', status: health?.status ?? 'Unknown', responseTime: health?.responseTime ?? '—' }]} />{health?.error ? <p className="mt-3 text-sm text-rose-600">{health.error}</p> : null}</>}
           </div>
         </div>
       </section>
@@ -95,7 +96,7 @@ export function DashboardPage() {
         <div className="panel-surface p-6">
           <SectionHeader
             title="Recent Requests"
-            description="Track recent request activity across your workspace."
+            description="Recorded tests, workflows, and Request Builder requests. URLs are redacted before display."
             action={
               <Link to="/history" className={buttonVariants({ variant: "ghost" })}>
                 View all
@@ -115,9 +116,7 @@ export function DashboardPage() {
               description="Recently updated API collections."
             />
             <div className="mt-6 space-y-3">
-              {collections.map((collection) => (
-                <CollectionCard key={collection.name} {...collection} />
-              ))}
+              {collections.length ? collections.slice().sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt)).slice(0, 4).map((collection) => <CollectionCard key={collection.id} name={collection.name} requests={collection.requests.length} updatedAt={new Date(collection.updatedAt).toLocaleString()} accent="bg-sky-500/10 text-sky-700" to={`/collections#${collection.id}`} />) : <p className="py-4 text-sm text-slate-500">No saved collections yet.</p>}
             </div>
           </div>
         </div>

@@ -1,13 +1,14 @@
-import { Settings } from "lucide-react";
-
-import { PlaceholderPage } from "@/pages/common/PlaceholderPage";
+import { Save, Settings } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { DEFAULT_REQUEST_TIMEOUT_MS, MAX_REQUEST_TIMEOUT_MS, MIN_REQUEST_TIMEOUT_MS, useAppStore } from "@/store/useAppStore";
 
 export function SettingsPage() {
-  return (
-    <PlaceholderPage
-      title="Settings"
-      description="Configure workspace defaults, user preferences, and future platform integrations."
-      icon={Settings}
-    />
-  );
+  const { currentUser, setDisplayName, requestTimeoutMs, setRequestTimeoutMs } = useAppStore();
+  const [name, setName] = useState(currentUser.name); const [timeout, setTimeoutValue] = useState(String(requestTimeoutMs)); const [message, setMessage] = useState('');
+  useEffect(() => { setName(currentUser.name); setTimeoutValue(String(requestTimeoutMs)); }, [currentUser.name, requestTimeoutMs]);
+  const save = () => { const numeric = Number(timeout); if (!Number.isFinite(numeric) || numeric < MIN_REQUEST_TIMEOUT_MS || numeric > MAX_REQUEST_TIMEOUT_MS) return setMessage(`Timeout must be between ${MIN_REQUEST_TIMEOUT_MS} and ${MAX_REQUEST_TIMEOUT_MS} ms.`); setDisplayName(name); setRequestTimeoutMs(numeric); setMessage('Settings saved locally.'); };
+  const reset = () => { setName('Developer'); setTimeoutValue(String(DEFAULT_REQUEST_TIMEOUT_MS)); setDisplayName('Developer'); setRequestTimeoutMs(DEFAULT_REQUEST_TIMEOUT_MS); setMessage('Settings reset to defaults.'); };
+  return <div className="mx-auto max-w-3xl space-y-6"><section className="panel-surface p-6"><div className="flex items-center gap-3"><Settings className="h-6 w-6 text-sky-700"/><div><h1 className="text-2xl font-semibold">Settings</h1><p className="text-sm text-slate-500">Local workspace preferences.</p></div></div></section><section className="panel-surface space-y-5 p-6"><div><label className="text-sm font-medium">Display name</label><Input aria-label="Display name" className="mt-2" value={name} onChange={(event) => setName(event.target.value)} /></div><div><label className="text-sm font-medium">Request Builder client timeout (milliseconds)</label><Input aria-label="Request timeout" className="mt-2" type="number" min={MIN_REQUEST_TIMEOUT_MS} max={MAX_REQUEST_TIMEOUT_MS} value={timeout} onChange={(event) => setTimeoutValue(event.target.value)} /><p className="mt-1 text-xs text-slate-500">Applies to Request Builder’s wait for APIForge. Range: {MIN_REQUEST_TIMEOUT_MS}–{MAX_REQUEST_TIMEOUT_MS} ms. It cannot override the backend executor’s own timeout limits.</p></div><div><h2 className="text-sm font-medium">Appearance</h2><p className="mt-1 text-sm text-slate-500">The current UI does not have a complete theme token system, so appearance follows the application’s existing light styling. No non-functional theme switch is provided.</p></div><div><h2 className="text-sm font-medium">Privacy and workspace data</h2><p className="mt-1 text-sm text-slate-500">Preferences and workspace records are stored in this browser. Persisted request and execution records are sanitized; credentials, authorization values, and secret environment values are excluded or redacted. Reset Workspace clears workspace data and resets request timeout, but retains your display name.</p></div><div className="flex gap-2"><Button onClick={save}><Save className="h-4 w-4"/>Save settings</Button><Button variant="outline" onClick={reset}>Reset settings</Button></div>{message && <p role="status" className="text-sm text-slate-600">{message}</p>}</section></div>;
 }

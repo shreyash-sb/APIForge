@@ -9,6 +9,9 @@ const statusStyles: Record<ApiHealthItem["status"], string> = {
   Healthy: "bg-emerald-500 text-emerald-500",
   Degraded: "bg-amber-500 text-amber-600",
   Incident: "bg-rose-500 text-rose-600",
+  Unknown: "bg-slate-400 text-slate-600",
+  "Not monitored": "bg-slate-400 text-slate-600",
+  Unavailable: "bg-rose-500 text-rose-600",
 };
 
 export function HealthStatus({ items }: HealthStatusProps) {

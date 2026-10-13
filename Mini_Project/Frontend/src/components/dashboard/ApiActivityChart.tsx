@@ -16,6 +16,7 @@ type ApiActivityChartProps = {
 };
 
 export function ApiActivityChart({ data }: ApiActivityChartProps) {
+  if (!data.length) return <div className="flex h-[280px] items-center justify-center text-center text-sm text-slate-500">No recorded execution events in the last seven days.</div>;
   return (
     <div className="h-[280px] w-full">
       <ResponsiveContainer width="100%" height="100%">
@@ -42,12 +43,13 @@ export function ApiActivityChart({ data }: ApiActivityChartProps) {
           />
           <Line
             type="monotone"
-            dataKey="errors"
+            dataKey="httpErrors"
             stroke="#7c3aed"
             strokeWidth={2.5}
             dot={{ r: 3, fill: "#7c3aed" }}
             activeDot={{ r: 5 }}
           />
+          <Line type="monotone" dataKey="transportFailures" name="Transport failures" stroke="#e11d48" strokeWidth={2.5} dot={{ r: 3, fill: "#e11d48" }} activeDot={{ r: 5 }} />
         </LineChart>
       </ResponsiveContainer>
     </div>

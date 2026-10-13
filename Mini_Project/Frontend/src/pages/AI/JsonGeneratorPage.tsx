@@ -1,13 +1,15 @@
-import { Sparkles } from "lucide-react";
-
-import { PlaceholderPage } from "@/pages/common/PlaceholderPage";
+import { Copy, Download, Sparkles } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+import { useAppStore } from "@/store/useAppStore";
+import { formatJson, generateJson } from "@/lib/jsonGenerator";
 
 export function JsonGeneratorPage() {
-  return (
-    <PlaceholderPage
-      title="JSON Generator"
-      description="Create realistic payloads and request templates tailored to your endpoint structure."
-      icon={Sparkles}
-    />
-  );
+  const specification = useAppStore((state) => state.activeSpecification); const [schemaId, setSchemaId] = useState(''); const [text, setText] = useState(''); const [message, setMessage] = useState('');
+  const schemas = useMemo(() => Object.entries(specification?.schemas ?? {}), [specification]); const selected = schemas.find(([name]) => name === schemaId)?.[1];
+  const format = () => { const result = formatJson(text); if ('error' in result) setMessage(`Invalid JSON: ${result.error}`); else { setText(result.value); setMessage('JSON formatted.'); } };
+  const generate = () => { const result = generateJson(selected); if (result.value !== undefined) setText(JSON.stringify(result.value, null, 2)); setMessage(result.unsupported.length ? `Generated supported fields. Unsupported: ${result.unsupported.join(', ')}` : result.value === undefined ? 'No JSON could be generated.' : 'Generated valid JSON.'); };
+  const copy = async () => { const result = formatJson(text); if ('error' in result) return setMessage(`Invalid JSON: ${result.error}`); await navigator.clipboard?.writeText(result.value); setMessage('JSON copied.'); };
+  const download = () => { const result = formatJson(text); if ('error' in result) return setMessage(`Invalid JSON: ${result.error}`); const url = URL.createObjectURL(new Blob([result.value], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = 'payload.json'; link.click(); URL.revokeObjectURL(url); };
+  return <div className="space-y-6"><section className="panel-surface p-6"><div className="flex items-center gap-3"><Sparkles className="h-6 w-6 text-violet-600"/><div><h1 className="text-2xl font-semibold">JSON Generator</h1><p className="text-sm text-slate-500">Deterministic sample generation; no API requests or AI are used.</p></div></div>{specification ? <div className="mt-5"><label className="text-sm font-medium">OpenAPI schema</label>{schemas.length ? <select aria-label="OpenAPI schema" className="ml-3 rounded border p-2" value={schemaId} onChange={(e) => setSchemaId(e.target.value)}><option value="">Select a schema</option>{schemas.map(([name]) => <option key={name}>{name}</option>)}</select> : <p className="mt-2 text-sm text-slate-500">This specification has no reusable schemas.</p>}</div> : <p className="mt-5 text-sm text-slate-500">No specification imported. You can still format and validate JSON, but schema generation is unavailable.</p>}</section><section className="panel-surface p-5"><textarea aria-label="JSON editor" className="min-h-80 w-full rounded border p-3 font-mono text-sm" value={text} onChange={(e) => setText(e.target.value)} placeholder='{"example": true}'/><div className="mt-3 flex flex-wrap gap-2"><Button onClick={format}>Format JSON</Button><Button onClick={generate} disabled={!selected}>Generate JSON</Button><Button variant="outline" onClick={copy}><Copy className="h-4 w-4"/>Copy</Button><Button variant="outline" onClick={download}><Download className="h-4 w-4"/>Download .json</Button></div>{message && <p className="mt-3 text-sm text-slate-600" role="status">{message}</p>}<p className="mt-3 text-xs text-slate-500">Supported: objects, arrays, strings, numbers, integers, booleans, required properties, enums, defaults, examples, and nested schemas. Composition keywords and unspecified types are reported as unsupported.</p></section></div>;
 }

@@ -1,4 +1,4 @@
-import { Bell, Menu, Search } from "lucide-react";
+import { Bell, Menu, RotateCcw, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,17 @@ import { useAppStore } from "@/store/useAppStore";
 
 export function Header() {
   const { title, description } = usePageTitle();
-  const { currentUser, toggleSidebar } = useAppStore();
+  const { currentUser, toggleSidebar, resetWorkspace } = useAppStore();
+
+  const handleResetWorkspace = () => {
+    if (
+      window.confirm(
+        "Are you sure you want to reset the workspace? This will clear all loaded OpenAPI specifications, generated test cases, and execution results, restoring initial workspace defaults."
+      )
+    ) {
+      resetWorkspace();
+    }
+  };
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-background/90 backdrop-blur-xl">
@@ -28,6 +38,17 @@ export function Header() {
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <Input placeholder="Search requests, collections, endpoints" className="pl-9" />
             </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleResetWorkspace}
+              className="gap-1.5 text-xs text-slate-600 hover:text-rose-600 hover:border-rose-300"
+              title="Reset Workspace"
+              id="reset-workspace-button"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              Reset Workspace
+            </Button>
             <Button variant="outline" size="icon" aria-label="Notifications">
               <Bell className="h-4 w-4" />
             </Button>
@@ -47,6 +68,15 @@ export function Header() {
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <Input placeholder="Search workspace" className="pl-9" />
           </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handleResetWorkspace}
+            aria-label="Reset Workspace"
+            title="Reset Workspace"
+          >
+            <RotateCcw className="h-4 w-4" />
+          </Button>
           <Button variant="outline" size="icon" aria-label="Notifications">
             <Bell className="h-4 w-4" />
           </Button>

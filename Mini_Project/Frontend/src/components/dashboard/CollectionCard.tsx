@@ -1,9 +1,10 @@
 import { FolderKanban } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import type { CollectionSummary } from "@/types/dashboard";
 
-export function CollectionCard({ name, requests, updatedAt, accent }: CollectionSummary) {
-  return (
+export function CollectionCard({ name, requests, updatedAt, accent, to }: CollectionSummary & { to?: string }) {
+  const content = (
     <div className="panel-surface flex items-center gap-4 p-4 transition-transform duration-200 hover:-translate-y-1">
       <div className={`rounded-xl p-3 ${accent}`}>
         <FolderKanban className="h-5 w-5" />
@@ -15,4 +16,5 @@ export function CollectionCard({ name, requests, updatedAt, accent }: Collection
       <p className="ml-auto text-xs text-slate-400">{updatedAt}</p>
     </div>
   );
+  return to ? <Link to={to}>{content}</Link> : content;
 }

@@ -33,3 +33,11 @@ test('outbound safety policy allows local development and blocks private product
   assert.equal(production.validateRequest(request('https://api.example.test')), null);
   assert.equal(production.validateRequest(request('file:///etc/passwd'))?.error.type, 'INVALID_URL');
 });
+
+test('normalizes invalid and excessive request timeout configuration to bounded values', () => {
+  const timeoutOf = (timeout: number) => (new RequestExecutorService(timeout) as unknown as { timeout: number }).timeout;
+  assert.equal(timeoutOf(Number.NaN), 30_000);
+  assert.equal(timeoutOf(0), 30_000);
+  assert.equal(timeoutOf(250_000), 120_000);
+  assert.equal(timeoutOf(1_500), 1_500);
+});

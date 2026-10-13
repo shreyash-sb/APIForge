@@ -26,11 +26,9 @@ import { createAiProvider } from './aiProvider.service.js';
 // Patterns for values that must never leave the backend
 const SECRET_PATTERNS = [
   /bearer\s+\S+/gi,
-  /token[:=]\s*\S+/gi,
-  /authorization[:=]\s*\S+/gi,
-  /api[-_]?key[:=]\s*\S+/gi,
-  /password[:=]\s*\S+/gi,
-  /secret[:=]\s*\S+/gi,
+  // JSON commonly wraps property names and values in quotes; the old patterns
+  // only matched `token: value`, allowing `{ "token": "value" }` through.
+  /(["']?(?:access[_-]?token|refresh[_-]?token|auth(?:orization)?|api[-_]?key|password|secret|token)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,}\]]+)/gi,
 ];
 
 function redactSecrets(value: string): string {
@@ -119,9 +117,9 @@ function buildEvidence(
         .map((a) => ({
           category: a.category,
           path: a.path,
-          expected: a.expected,
-          actual: a.actual,
-          message: a.message,
+          expected: redactSecrets(a.expected),
+          actual: redactSecrets(a.actual),
+          message: redactSecrets(a.message),
         })),
     },
   };

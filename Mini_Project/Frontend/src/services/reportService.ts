@@ -5,8 +5,12 @@ import type { TestCaseExecutionResult } from '@/types/testExecution.types';
 import type { TestCaseValidationResult } from '@/types/validation.types';
 import type { DiagnosisResult } from '@/types/diagnosis.types';
 import type { EndpointReportItem, FailureBreakdownItem, GenerateReportRequest, ReportSummary } from '@/types/report.types';
+import { formatApiErrorMessage } from './apiError';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE_URL =
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
+  'http://localhost:3001';
 export class ReportApiError extends Error { constructor(message: string) { super(message); this.name = 'ReportApiError'; } }
 
 const csv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
@@ -30,7 +34,7 @@ export const reportService = {
   },
   async generateReport(payload: GenerateReportRequest): Promise<ReportSummary> {
     try { return (await axios.post<ReportSummary>(`${API_BASE_URL}/api/reports/generate`, payload, { timeout: 30000 })).data; }
-    catch (error: unknown) { const message = axios.isAxiosError(error) ? ((error.response?.data as { error?: { message?: string } })?.error?.message || error.message) : (error instanceof Error ? error.message : 'Unable to generate report.'); throw new ReportApiError(message); }
+    catch (error: unknown) { const message = formatApiErrorMessage(error, 'Unable to generate report.'); throw new ReportApiError(message); }
   },
   downloadReportJson(report: ReportSummary) { download(`apiforge-report-${report.metadata.reportId}.json`, 'application/json', JSON.stringify(report, null, 2)); },
   downloadEndpointCsv(endpoints: EndpointReportItem[]) {

@@ -14,7 +14,7 @@ import {
   Settings,
   Sparkles,
   TestTube2,
-  Waypoints,
+  Workflow,
 } from "lucide-react";
 
 import type {
@@ -34,6 +34,7 @@ export const navigationGroups: NavGroup[] = [
     items: [
       { label: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
       { label: "Collections", path: "/collections", icon: FolderKanban },
+      { label: "Workflows", path: "/workflows", icon: Workflow },
       { label: "Request Builder", path: "/request-builder", icon: Braces },
       { label: "History", path: "/history", icon: History },
       { label: "Environments", path: "/environments", icon: Boxes },
@@ -61,7 +62,6 @@ export const navigationGroups: NavGroup[] = [
 
 export const secondaryNavigation = [
   { label: "Settings", path: "/settings", icon: Settings },
-  { label: "Help Center", path: "/documentation", icon: Waypoints },
 ];
 
 export const dashboardStats: StatsCardData[] = [
@@ -106,15 +106,8 @@ export const recentRequests: RecentRequest[] = [
   { method: "GET", endpoint: "/api/orders/123", collection: "Order Service", status: 404, responseTime: "192 ms", time: "31 min ago" },
 ];
 
-export const apiActivity: ChartPoint[] = [
-  { day: "Mon", requests: 142, errors: 5 },
-  { day: "Tue", requests: 168, errors: 7 },
-  { day: "Wed", requests: 154, errors: 4 },
-  { day: "Thu", requests: 181, errors: 8 },
-  { day: "Fri", requests: 205, errors: 6 },
-  { day: "Sat", requests: 132, errors: 3 },
-  { day: "Sun", requests: 118, errors: 2 },
-];
+// Kept only for style-story compatibility; the dashboard intentionally does not consume demo activity.
+export const apiActivity: ChartPoint[] = [];
 
 export const apiHealth: ApiHealthItem[] = [
   { service: "User Service", status: "Healthy", responseTime: "118 ms" },
@@ -132,15 +125,18 @@ export const collections: CollectionSummary[] = [
 
 export const aiAssistantActions: AiAction[] = [
   {
-    title: "Explain Error",
-    description: "Turn failing responses into readable debugging context.",
+    title: "Diagnose test failures",
+    description: "Advisory diagnosis uses Gemini only when configured; otherwise it uses the deterministic mock provider.",
+    path: "/ai-assistant",
   },
   {
-    title: "Generate Test Cases",
-    description: "Draft request scenarios for common success and edge flows.",
+    title: "Generate test cases",
+    description: "Create deterministic test definitions from the imported OpenAPI specification.",
+    path: "/test-generator",
   },
   {
-    title: "Generate JSON Payload",
-    description: "Create structured sample bodies from endpoint intent.",
+    title: "Generate JSON samples",
+    description: "Create deterministic schema-based JSON samples, with unsupported features reported clearly.",
+    path: "/json-generator",
   },
 ];

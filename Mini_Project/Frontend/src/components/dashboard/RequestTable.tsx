@@ -7,6 +7,7 @@ type RequestTableProps = {
 };
 
 export function RequestTable({ requests }: RequestTableProps) {
+  if (!requests.length) return <p className="py-8 text-center text-sm text-slate-500">No recorded executions yet. Run a generated test or workflow to see sanitized request activity.</p>;
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
@@ -29,10 +30,10 @@ export function RequestTable({ requests }: RequestTableProps) {
               <td className="py-4 pr-4 font-medium text-slate-950">{request.endpoint}</td>
               <td className="py-4 pr-4 text-slate-600">{request.collection}</td>
               <td className="py-4 pr-4">
-                <StatusBadge status={request.status} />
+                {request.status ? <StatusBadge status={request.status} /> : <span className="text-xs font-medium text-rose-700">{request.outcome ?? 'No response'}</span>}
               </td>
               <td className="py-4 pr-4 text-slate-600">{request.responseTime}</td>
-              <td className="py-4 text-slate-500">{request.time}</td>
+              <td className="py-4 text-slate-500">{new Date(request.time).toLocaleString()}</td>
             </tr>
           ))}
         </tbody>

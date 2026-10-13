@@ -8,12 +8,19 @@ import type {
   QueryParam,
 } from '../types/request.types.js';
 
+const DEFAULT_TIMEOUT_MS = 30_000;
+const MAX_TIMEOUT_MS = 120_000;
+const MAX_HTTP_PAYLOAD_BYTES = 10 * 1024 * 1024;
+
 export class RequestExecutorService {
   private readonly timeout: number;
   private readonly productionSafeMode: boolean;
 
-  constructor(timeout: number = 30000, productionSafeMode = process.env.OUTBOUND_REQUEST_SAFE_MODE === 'true') {
-    this.timeout = timeout;
+  constructor(timeout: number = DEFAULT_TIMEOUT_MS, productionSafeMode = process.env.OUTBOUND_REQUEST_SAFE_MODE === 'true') {
+    // A malformed environment value must not turn Axios timeouts off (NaN/0).
+    this.timeout = Number.isFinite(timeout) && timeout > 0
+      ? Math.min(Math.floor(timeout), MAX_TIMEOUT_MS)
+      : DEFAULT_TIMEOUT_MS;
     this.productionSafeMode = productionSafeMode;
   }
 
@@ -45,6 +52,9 @@ export class RequestExecutorService {
         timeout: this.timeout,
         validateStatus: () => true, // Accept all status codes
         maxRedirects: 5,
+        // Prevent a remote endpoint from making the API process retain an unbounded response.
+        maxContentLength: MAX_HTTP_PAYLOAD_BYTES,
+        maxBodyLength: MAX_HTTP_PAYLOAD_BYTES,
       };
 
       // Execute request

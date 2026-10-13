@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   AlertCircle,
   AlertTriangle,
@@ -108,6 +108,14 @@ export function ResponseValidationPage() {
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | undefined>(
     () => generatedTests[0]?.id
   );
+
+  useEffect(() => {
+    if (!selectedTestCaseId && generatedTests.length > 0) {
+      setSelectedTestCaseId(generatedTests[0]?.id);
+    } else if (selectedTestCaseId && !generatedTests.some((t) => t.id === selectedTestCaseId)) {
+      setSelectedTestCaseId(generatedTests[0]?.id);
+    }
+  }, [generatedTests, selectedTestCaseId]);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<FilterStatus>('ALL');
   const [validatingBatch, setValidatingBatch] = useState(false);

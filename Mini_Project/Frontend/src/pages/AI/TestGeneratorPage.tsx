@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Activity,
   AlertCircle,
@@ -80,6 +80,19 @@ export function TestGeneratorPage() {
   const [executingSingleId, setExecutingSingleId] = useState<string | null>(null);
   const [executionError, setExecutionError] = useState<string | null>(null);
 
+  useEffect(() => {
+    setTests(storeGeneratedTests);
+    if (!selectedId && storeGeneratedTests.length > 0) {
+      setSelectedId(storeGeneratedTests[0]?.id);
+    } else if (storeGeneratedTests.length === 0) {
+      setSelectedId(undefined);
+    }
+  }, [storeGeneratedTests, selectedId]);
+
+  useEffect(() => {
+    setExecutionResults(storeExecutionResults);
+  }, [storeExecutionResults]);
+
   const selected = tests.find((test) => test.id === selectedId);
   const endpointIds = useMemo(() => specification?.endpoints.map((endpoint) => endpoint.id) ?? [], [specification]);
 
@@ -122,8 +135,12 @@ export function TestGeneratorPage() {
       setTests(suite.tests);
       setStoreGeneratedTests(suite.tests);
       setSelectedId(suite.tests[0]?.id);
-    } catch {
-      setError('Test generation failed. Ensure the APIForge backend is running.');
+    } catch (err: unknown) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Test generation failed. Ensure the APIForge backend is running.'
+      );
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,11 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { SettingsPage } from '@/pages/Settings/SettingsPage';
+import { renderWithRouter, resetStore } from '@/test/test-utils';
+import { DEFAULT_REQUEST_TIMEOUT_MS, useAppStore } from '@/store/useAppStore';
+describe('SettingsPage', () => { beforeEach(() => { localStorage.clear(); resetStore(); });
+  it('updates and persists display name and bounded timeout', async () => { const user = userEvent.setup(); renderWithRouter(<SettingsPage />); await user.clear(screen.getByLabelText('Display name')); await user.type(screen.getByLabelText('Display name'), 'Ada'); await user.clear(screen.getByLabelText('Request timeout')); await user.type(screen.getByLabelText('Request timeout'), '12000'); await user.click(screen.getByRole('button', { name: /Save settings/i })); expect(useAppStore.getState().currentUser.name).toBe('Ada'); expect(useAppStore.getState().requestTimeoutMs).toBe(12000); expect(localStorage.getItem('apiforge-workspace')).toContain('12000'); });
+  it('rejects a timeout beyond the safe client bound and resets settings', async () => { const user = userEvent.setup(); renderWithRouter(<SettingsPage />); await user.clear(screen.getByLabelText('Request timeout')); await user.type(screen.getByLabelText('Request timeout'), '999999'); await user.click(screen.getByRole('button', { name: /Save settings/i })); expect(screen.getByRole('status')).toHaveTextContent('Timeout must be'); await user.click(screen.getByRole('button', { name: /Reset settings/i })); expect(useAppStore.getState().requestTimeoutMs).toBe(DEFAULT_REQUEST_TIMEOUT_MS); });
+  it('keeps display name but resets timeout on workspace reset', () => { useAppStore.getState().setDisplayName('Ada'); useAppStore.getState().setRequestTimeoutMs(12000); useAppStore.getState().resetWorkspace(); expect(useAppStore.getState().currentUser.name).toBe('Ada'); expect(useAppStore.getState().requestTimeoutMs).toBe(DEFAULT_REQUEST_TIMEOUT_MS); });
+});

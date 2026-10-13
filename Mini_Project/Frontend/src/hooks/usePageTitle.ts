@@ -10,6 +10,10 @@ const routeTitles: Record<string, { title: string; description: string }> = {
     title: "Collections",
     description: "Organize API workflows and shared request sets.",
   },
+  "/workflows": {
+    title: "Workflows",
+    description: "Multi-step scenario orchestration with safe variable chaining and teardowns.",
+  },
   "/request-builder": {
     title: "Request Builder",
     description: "Compose requests, payloads, headers, and auth flows.",

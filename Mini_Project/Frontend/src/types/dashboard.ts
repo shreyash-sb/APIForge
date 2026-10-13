@@ -28,23 +28,25 @@ export type QuickAction = {
 };
 
 export type RecentRequest = {
-  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE" | "HEAD" | "OPTIONS" | "TRACE";
   endpoint: string;
   collection: string;
-  status: number;
+  status?: number;
   responseTime: string;
   time: string;
+  outcome?: string;
 };
 
 export type ChartPoint = {
   day: string;
   requests: number;
-  errors: number;
+  httpErrors: number;
+  transportFailures: number;
 };
 
 export type ApiHealthItem = {
   service: string;
-  status: "Healthy" | "Degraded" | "Incident";
+  status: "Healthy" | "Degraded" | "Incident" | "Unknown" | "Not monitored" | "Unavailable";
   responseTime: string;
 };
 
@@ -58,4 +60,5 @@ export type CollectionSummary = {
 export type AiAction = {
   title: string;
   description: string;
+  path: string;
 };

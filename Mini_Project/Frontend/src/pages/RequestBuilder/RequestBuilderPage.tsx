@@ -17,7 +17,7 @@ const HTTP_METHODS: HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HE
 type TabType = 'params' | 'headers' | 'auth' | 'body';
 
 export function RequestBuilderPage() {
-  const { requestDraft, setRequestDraft } = useAppStore();
+  const { requestDraft, setRequestDraft, recordManualRequestExecution } = useAppStore();
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [url, setUrl] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('params');
@@ -113,6 +113,7 @@ export function RequestBuilderPage() {
 
     setLoading(true);
     setResponse(null);
+    const startedAt = Date.now();
 
     try {
       const result = await requestService.executeRequest({
@@ -125,7 +126,18 @@ export function RequestBuilderPage() {
       });
 
       setResponse(result);
+      recordManualRequestExecution({
+        id: crypto.randomUUID(),
+        method,
+        endpoint: url,
+        completedAt: new Date().toISOString(),
+        durationMs: result.success ? result.responseTime : Date.now() - startedAt,
+        status: result.success ? 'HTTP_RESPONSE' : result.error.type === 'VALIDATION_ERROR' || result.error.type === 'INVALID_URL' ? 'REQUEST_VALIDATION_FAILURE' : 'TRANSPORT_FAILURE',
+        httpStatus: result.success ? result.status : undefined,
+        errorType: result.success ? undefined : result.error.type,
+      });
     } catch {
+      recordManualRequestExecution({ id: crypto.randomUUID(), method, endpoint: url, completedAt: new Date().toISOString(), durationMs: Date.now() - startedAt, status: 'TRANSPORT_FAILURE', errorType: 'UNKNOWN_ERROR' });
       setResponse({
         success: false,
         error: {
