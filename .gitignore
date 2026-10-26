@@ -27,11 +27,8 @@ out/
 .parcel-cache/
 
 # --- Environment Secrets & Local Overrides ---
-.env
-.env.*
-!.env.example
-!*/.env.example
-*.env
+.env*
+*.env*
 *.env.local
 
 # --- Operating System Artifacts ---
