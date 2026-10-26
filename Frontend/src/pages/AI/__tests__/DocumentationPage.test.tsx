@@ -1,0 +1,12 @@
+import { beforeEach, describe, expect, it } from 'vitest';
+import { screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { DocumentationPage } from '@/pages/AI/DocumentationPage';
+import { renderWithRouter, resetStore } from '@/test/test-utils';
+import { useAppStore } from '@/store/useAppStore';
+import { mockSpecification } from '@/test/fixtures';
+describe('DocumentationPage', () => { beforeEach(() => resetStore());
+  it('shows import empty state when no specification is available', () => { renderWithRouter(<DocumentationPage />); expect(screen.getByText(/No API specification imported/i)).toBeInTheDocument(); expect(screen.getByRole('link', { name: /OpenAPI Import/i })).toHaveAttribute('href', '/openapi'); });
+  it('renders imported endpoints and filters them by search and method', async () => { useAppStore.getState().setActiveSpecification(mockSpecification); const user = userEvent.setup(); renderWithRouter(<DocumentationPage />); expect(screen.getByText(mockSpecification.metadata.title)).toBeInTheDocument(); const input = screen.getByLabelText('Search endpoints'); await user.type(input, 'not-present'); expect(screen.getByText(/No endpoints match/i)).toBeInTheDocument(); await user.clear(input); await user.selectOptions(screen.getByLabelText('Method filter'), 'GET'); expect(screen.getByText(mockSpecification.endpoints[0].path)).toBeInTheDocument(); });
+  it('uses React text rendering for untrusted imported content', () => { useAppStore.getState().setActiveSpecification({ ...mockSpecification, metadata: { ...mockSpecification.metadata, title: '<img src=x onerror=alert(1)>' } }); renderWithRouter(<DocumentationPage />); expect(screen.getByText('<img src=x onerror=alert(1)>')).toBeInTheDocument(); expect(document.querySelector('img')).toBeNull(); });
+});

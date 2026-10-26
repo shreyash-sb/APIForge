@@ -1,0 +1,74 @@
+# ==============================================================================
+# APIForge Consolidated Root .gitignore
+# ==============================================================================
+
+# --- Node & Package Managers ---
+node_modules/
+*/node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.pnpm-store/
+
+# --- Build Outputs & Caches ---
+dist/
+*/dist/
+build/
+*/build/
+out/
+*/out/
+.next/
+*.tsbuildinfo
+*/tsconfig*.tsbuildinfo
+.turbo/
+.cache/
+.parcel-cache/
+
+# --- Environment Secrets & Local Overrides ---
+.env
+.env.*
+!.env.example
+!*/.env.example
+*.env
+*.env.local
+
+# --- Operating System Artifacts ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+[Dd]esktop.ini
+
+# --- Editor & IDE Cruft ---
+*.swp
+*.swo
+*.swn
+*~
+*.bak
+*.tmp
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+!.vscode/launch.json
+.idea/
+*.sublime-project
+*.sublime-workspace
+.claude/
+
+# --- Testing & Coverage ---
+coverage/
+*/coverage/
+.nyc_output/
+*.lcov
+test-results/
+playwright-report/
+blob-report/
+
+# --- Logs ---
+logs/
+*.log

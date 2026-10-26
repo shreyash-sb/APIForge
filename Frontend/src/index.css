@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 218 33% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 216 74% 44%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 215 33% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 214 32% 95%;
+    --muted-foreground: 215 16% 42%;
+    --accent: 214 42% 93%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 24% 88%;
+    --input: 214 24% 88%;
+    --ring: 216 74% 44%;
+    --success: 148 58% 42%;
+    --warning: 38 92% 50%;
+    --info: 217 91% 60%;
+    --ai: 269 75% 62%;
+    --chart-1: 215 82% 56%;
+    --chart-2: 265 73% 63%;
+    --chart-3: 145 63% 42%;
+    --chart-4: 0 72% 51%;
+    --radius: 1rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased text-[15px] leading-relaxed;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  .panel-surface {
+    @apply rounded-xl border border-slate-200/80 bg-white/95 shadow-soft backdrop-blur-sm;
+  }
+}
+
+/* Custom sleek scrollbar for modern browsers and dark sidebar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+

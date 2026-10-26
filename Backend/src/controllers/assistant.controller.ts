@@ -1,0 +1,2 @@
+import type { Request, Response } from 'express'; import { AssistantService } from '../services/assistant.service.js';
+export class AssistantController { constructor(private readonly service = new AssistantService()) {} async ask(req: Request, res: Response) { try { res.json(await this.service.ask(req.body?.message, req.body?.context)); } catch (error) { res.status(400).json({ error: { message: error instanceof Error ? error.message : 'Assistant request failed.' } }); } } }
