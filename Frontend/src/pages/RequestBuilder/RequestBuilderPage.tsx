@@ -18,6 +18,7 @@ import {
   FileCode,
   CheckCircle2,
   XCircle,
+  FolderKanban,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,7 +54,16 @@ interface StreamLog {
 }
 
 export function RequestBuilderPage() {
-  const { requestDraft, setRequestDraft, recordManualRequestExecution, environments, activeEnvironmentId } = useAppStore();
+  const {
+    requestDraft,
+    setRequestDraft,
+    recordManualRequestExecution,
+    environments,
+    activeEnvironmentId,
+    collections,
+    createCollection,
+    updateCollection,
+  } = useAppStore();
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [url, setUrl] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('params');
@@ -86,6 +96,13 @@ export function RequestBuilderPage() {
   const [exportModalOpen, setExportModalOpen] = useState(false);
   const [codeLang, setCodeLang] = useState<CodeLang>('curl');
   const [copied, setCopied] = useState(false);
+
+  // ── Save to Collection State ──
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saveCollectionId, setSaveCollectionId] = useState('');
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [saveRequestName, setSaveRequestName] = useState('');
+  const [saveFeedback, setSaveFeedback] = useState('');
 
   // ── Scheduled Synthetic Ping Monitor State ──
   const [syntheticActive, setSyntheticActive] = useState(false);
@@ -557,6 +574,49 @@ export function RequestBuilderPage() {
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const handleSaveToCollection = () => {
+    let targetId = saveCollectionId;
+    if ((!targetId || targetId === '__new__') && newCollectionName.trim()) {
+      targetId = createCollection(newCollectionName.trim());
+    } else if (!targetId && collections.length > 0) {
+      targetId = collections[0].id;
+    } else if (!targetId || targetId === '__new__') {
+      targetId = createCollection('My API Collection');
+    }
+
+    const currentCollection = collections.find((c) => c.id === targetId);
+    const existingReqs = currentCollection?.requests || [];
+    let reqName = saveRequestName.trim();
+    if (!reqName) {
+      try {
+        reqName = url ? `${method} ${new URL(url).pathname}` : `${method} Request`;
+      } catch {
+        reqName = `${method} Request`;
+      }
+    }
+
+    const newReq = {
+      id: crypto.randomUUID(),
+      name: reqName,
+      method,
+      url,
+      queryParams,
+      headers,
+      body,
+      auth,
+    };
+
+    updateCollection(targetId, {
+      requests: [...existingReqs, newReq],
+    });
+
+    setSaveFeedback('Request saved to collection!');
+    setTimeout(() => {
+      setSaveFeedback('');
+      setSaveModalOpen(false);
+    }, 1000);
+  };
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -569,6 +629,28 @@ export function RequestBuilderPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                let defaultName = `${method} Request`;
+                try {
+                  if (url) defaultName = `${method} ${new URL(url).pathname}`;
+                } catch {
+                  defaultName = `${method} ${url || 'Request'}`;
+                }
+                setSaveRequestName(defaultName);
+                if (collections.length > 0 && !saveCollectionId) {
+                  setSaveCollectionId(collections[0].id);
+                }
+                setSaveFeedback('');
+                setSaveModalOpen(true);
+              }}
+              className="h-8.5 text-xs font-medium"
+            >
+              <FolderKanban className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+              Save to Collection
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -1519,6 +1601,84 @@ export function RequestBuilderPage() {
             <div className="mt-5 flex justify-end">
               <Button size="sm" variant="outline" onClick={() => setExportModalOpen(false)}>
                 Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SAVE TO COLLECTION MODAL ── */}
+      {saveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <FolderKanban className="h-5 w-5 text-emerald-600" />
+                <h3 className="text-base font-bold text-slate-900">Save Request to Collection</h3>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSaveModalOpen(false)}>
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-4">
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Request Name</label>
+                <Input
+                  className="mt-1 text-xs"
+                  placeholder="e.g., Get All Users"
+                  value={saveRequestName}
+                  onChange={(e) => setSaveRequestName(e.target.value)}
+                />
+              </div>
+
+              <div>
+                <label className="text-xs font-bold uppercase tracking-wider text-slate-600">Target Collection</label>
+                {collections.length > 0 ? (
+                  <select
+                    className="mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 text-xs font-medium text-slate-800 shadow-xs"
+                    value={saveCollectionId}
+                    onChange={(e) => {
+                      setSaveCollectionId(e.target.value);
+                      if (e.target.value !== '__new__') setNewCollectionName('');
+                    }}
+                  >
+                    {collections.map((col) => (
+                      <option key={col.id} value={col.id}>
+                        {col.name} ({col.requests.length} requests)
+                      </option>
+                    ))}
+                    <option value="__new__">+ Create new collection...</option>
+                  </select>
+                ) : null}
+              </div>
+
+              {(collections.length === 0 || saveCollectionId === '__new__') && (
+                <div>
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-600">New Collection Name</label>
+                  <Input
+                    className="mt-1 text-xs"
+                    placeholder="e.g., User Management API"
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                  />
+                </div>
+              )}
+
+              {saveFeedback && (
+                <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-2.5 text-xs font-medium text-emerald-800 flex items-center gap-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  {saveFeedback}
+                </div>
+              )}
+            </div>
+
+            <div className="mt-6 flex justify-end gap-2">
+              <Button variant="outline" size="sm" onClick={() => setSaveModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveToCollection} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold">
+                Save Request
               </Button>
             </div>
           </div>

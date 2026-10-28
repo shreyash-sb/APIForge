@@ -74,7 +74,8 @@ export function MockServerPage() {
   // Log Inspection Modal
   const [selectedLog, setSelectedLog] = useState<MockRequestLog | null>(null);
 
-  const mockBaseUrl = 'http://localhost:3001/api/mock/serve';
+  const apiBase = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:3001';
+  const mockBaseUrl = `${apiBase}/api/mock/serve`;
 
   const loadRoutesAndLogs = useCallback(async () => {
     setLoading(true);
@@ -222,9 +223,10 @@ export function MockServerPage() {
   };
 
   const handleTestInBuilder = (route: MockRoute) => {
+    const resolvedPath = route.path.replace(/:[a-zA-Z0-9_]+/g, '101').replace(/\{[a-zA-Z0-9_]+\}/g, '101');
     setRequestDraft({
       method: route.method,
-      url: `${mockBaseUrl}${route.path}`,
+      url: `${mockBaseUrl}${resolvedPath.startsWith('/') ? '' : '/'}${resolvedPath}`,
       queryParams: [],
       headers: [{ id: crypto.randomUUID(), key: 'Accept', value: 'application/json', enabled: true }],
       body: route.method !== 'GET' && route.method !== 'HEAD' ? '{\n  "test": true\n}' : '',

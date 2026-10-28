@@ -1,0 +1,88 @@
+{
+  "id": "wf-user-management-demo",
+  "name": "User Management Lifecycle Workflow",
+  "description": "End-to-end integration demo: Creates Aarav Patil (ID: 101), extracts the user ID, fetches profile with dependency check, updates profile, and executes teardown cleanup.",
+  "steps": [
+    {
+      "id": "step-create-user",
+      "name": "1. Create User (POST)",
+      "description": "Create student Aarav Patil and extract created user ID",
+      "enabled": true,
+      "request": {
+        "method": "POST",
+        "url": "http://localhost:3001/api/mock/serve/api/users",
+        "headers": [
+          { "id": "h-create-1", "key": "Content-Type", "value": "application/json", "enabled": true }
+        ],
+        "queryParams": [],
+        "body": "{\n  \"name\": \"Aarav Patil\",\n  \"email\": \"aarav@example.com\",\n  \"role\": \"student\",\n  \"active\": true\n}",
+        "auth": { "type": "none" }
+      },
+      "extractors": [
+        {
+          "targetVariable": "createdUserId",
+          "source": "BODY_JSONPATH",
+          "path": "$.id",
+          "defaultValue": "101",
+          "isSecret": false
+        },
+        {
+          "targetVariable": "createdUserName",
+          "source": "BODY_JSONPATH",
+          "path": "$.name",
+          "defaultValue": "Aarav Patil",
+          "isSecret": false
+        }
+      ]
+    },
+    {
+      "id": "step-get-user",
+      "name": "2. Retrieve User Details (GET)",
+      "description": "Fetch user by ID passing {{createdUserId}} from Step 1",
+      "enabled": true,
+      "dependsOn": ["step-create-user"],
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3001/api/mock/serve/api/users/{{createdUserId}}",
+        "headers": [
+          { "id": "h-get-1", "key": "Accept", "value": "application/json", "enabled": true }
+        ],
+        "queryParams": [],
+        "body": "",
+        "auth": { "type": "none" }
+      }
+    },
+    {
+      "id": "step-update-user",
+      "name": "3. Update User (PUT)",
+      "description": "Update active status and role for {{createdUserId}}",
+      "enabled": true,
+      "dependsOn": ["step-get-user"],
+      "request": {
+        "method": "PUT",
+        "url": "http://localhost:3001/api/mock/serve/api/users/{{createdUserId}}",
+        "headers": [
+          { "id": "h-put-1", "key": "Content-Type", "value": "application/json", "enabled": true }
+        ],
+        "queryParams": [],
+        "body": "{\n  \"id\": 101,\n  \"name\": \"Aarav Patil\",\n  \"email\": \"aarav@example.com\",\n  \"role\": \"student\",\n  \"active\": true\n}",
+        "auth": { "type": "none" }
+      }
+    },
+    {
+      "id": "step-delete-user",
+      "name": "4. Teardown Cleanup (DELETE)",
+      "description": "Guaranteed cleanup step deleting the temporary demo user",
+      "enabled": true,
+      "isTeardown": true,
+      "request": {
+        "method": "DELETE",
+        "url": "http://localhost:3001/api/mock/serve/api/users/{{createdUserId}}",
+        "headers": [],
+        "queryParams": [],
+        "body": "",
+        "auth": { "type": "none" }
+      }
+    }
+  ]
+}

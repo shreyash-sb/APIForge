@@ -52,10 +52,10 @@ export const navigationGroups: NavGroup[] = [
   {
     title: "AI Tools",
     items: [
-      { label: "AI Assistant", path: "/ai-assistant", icon: Bot, badge: "AI" },
-      { label: "Test Generator", path: "/test-generator", icon: TestTube2, badge: "AI" },
-      { label: "Documentation", path: "/documentation", icon: BookMarked, badge: "AI" },
-      { label: "JSON Generator", path: "/json-generator", icon: Sparkles, badge: "AI" },
+      { label: "AI Assistant", path: "/ai-assistant", icon: Bot },
+      { label: "Test Generator", path: "/test-generator", icon: TestTube2 },
+      { label: "Documentation", path: "/documentation", icon: BookMarked },
+      { label: "JSON Generator", path: "/json-generator", icon: Sparkles },
     ],
   },
 ];

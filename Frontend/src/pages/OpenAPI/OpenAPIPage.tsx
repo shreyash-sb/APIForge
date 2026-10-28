@@ -8,6 +8,7 @@ import {
   Loader2,
   Send,
   ShieldCheck,
+  Sparkles,
   UploadCloud,
   XCircle,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { downloadJsonFile, exportSpecificationToOpenApi } from '@/lib/openApiExporter';
 import { openApiService } from '@/services/openapiService';
 import { useAppStore } from '@/store/useAppStore';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
 import type {
   ApiEndpoint,
   ApiMediaContent,
@@ -95,6 +97,32 @@ function authFromEndpoint(endpoint: ApiEndpoint, schemes: Record<string, ApiSecu
     : { type: 'none' };
 }
 
+function resolveEndpointUrl(serverUrl: string | undefined, endpoint: ApiEndpoint): string {
+  let server = (serverUrl || '').trim();
+  if (!server) {
+    server = 'http://localhost:3001/api/mock/serve';
+  } else if (!server.startsWith('http://') && !server.startsWith('https://')) {
+    server = `http://localhost:3001${server.startsWith('/') ? '' : '/'}${server}`;
+  }
+
+  let resolvedPath = endpoint.path;
+  for (const parameter of endpoint.parameters) {
+    if (parameter.location === 'path') {
+      const val =
+        parameter.example ??
+        parameter.default ??
+        (parameter.schema ? schemaExample(parameter.schema) : undefined) ??
+        '101';
+      resolvedPath = resolvedPath.replace(new RegExp(`\\{${parameter.name}\\}`, 'g'), String(val));
+    }
+  }
+  // Substitute any remaining curly braces
+  resolvedPath = resolvedPath.replace(/\{[a-zA-Z0-9_-]+\}/g, '101');
+
+  const cleanServer = server.replace(/\/$/, '');
+  return `${cleanServer}${resolvedPath.startsWith('/') ? '' : '/'}${resolvedPath}`;
+}
+
 export function OpenAPIPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -171,8 +199,29 @@ export function OpenAPIPage() {
     }
   };
 
+  const loadDemoSpec = async () => {
+    setLoading(true);
+    setError(undefined);
+    setErrorDetails(undefined);
+    try {
+      const result = await openApiService.importSpecification('user-management-api.json', USER_MANAGEMENT_SPEC_JSON);
+      if (result.success) {
+        setSpecification(result.specification);
+        setActiveSpecification(result.specification);
+        setSelectedEndpointId(result.specification.endpoints[0]?.id);
+      } else {
+        setError(result.error.message);
+        setErrorDetails(result.error.details);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to import specification.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openInBuilder = (endpoint: ApiEndpoint) => {
-    const server = specification?.servers[0]?.url ?? '';
+    const finalUrl = resolveEndpointUrl(specification?.servers[0]?.url, endpoint);
     const queryParams: QueryParam[] = endpoint.parameters
       .filter((parameter) => parameter.location === 'query')
       .map((parameter) => ({
@@ -203,7 +252,7 @@ export function OpenAPIPage() {
     const example = firstExample(content);
     setRequestDraft({
       method: endpoint.method as HttpMethod,
-      url: `${server.replace(/\/$/, '')}${endpoint.path}`,
+      url: finalUrl,
       queryParams,
       headers,
       body: example === undefined ? '' : JSON.stringify(example, null, 2),
@@ -285,8 +334,29 @@ export function OpenAPIPage() {
           </p>
         </button>
 
+        {/* Live Demo Preset */}
+        <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-sky-100 bg-sky-50/70 p-4">
+          <div className="flex items-center gap-2.5 text-xs text-sky-900">
+            <Sparkles className="h-4.5 w-4.5 text-sky-600 shrink-0" />
+            <div>
+              <p className="font-bold">Live Demo Preset</p>
+              <p className="text-[11px] text-sky-700">Load official User Management API (OAS 3.1) with pre-configured mock endpoints</p>
+            </div>
+          </div>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={loadDemoSpec}
+            disabled={loading}
+            className="h-10 px-4 gap-2 border-sky-300 bg-white text-xs font-semibold text-sky-800 hover:bg-sky-100 shadow-xs rounded-xl"
+          >
+            <Sparkles className="h-4 w-4 text-sky-600" />
+            Load User Management Spec
+          </Button>
+        </div>
+
         {file && (
-          <div className="mt-4 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 p-3.5">
+          <div className="mt-5 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50/80 p-4">
             <div className="flex min-w-0 items-center gap-3">
               <FileCode2 className="h-5 w-5 shrink-0 text-sky-600" />
               <div className="min-w-0">
@@ -296,16 +366,16 @@ export function OpenAPIPage() {
                 </p>
               </div>
             </div>
-            <Button size="sm" onClick={importFile} disabled={loading} className="gap-1.5 h-8 text-xs font-medium">
+            <Button size="sm" onClick={importFile} disabled={loading} className="gap-2 h-10 px-5 text-xs font-semibold rounded-xl bg-slate-900 hover:bg-slate-800 text-white shadow-xs">
               {loading ? (
                 <>
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Parsing
                 </>
               ) : (
                 <>
-                  <FileUp className="h-3.5 w-3.5" />
-                  Import
+                  <FileUp className="h-4 w-4" />
+                  Import Specification
                 </>
               )}
             </Button>
@@ -313,7 +383,7 @@ export function OpenAPIPage() {
         )}
 
         {error && (
-          <div className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-3.5 text-xs text-rose-800">
+          <div className="mt-5 rounded-xl border border-rose-200 bg-rose-50 p-4 text-xs text-rose-800">
             <div className="flex items-center gap-2 font-semibold">
               <XCircle className="h-4 w-4 shrink-0" />
               {error}
@@ -352,9 +422,9 @@ function Explorer({
   }, {});
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Specification Header Card */}
-      <section className="panel-surface p-5 sm:p-6">
+      <section className="panel-surface p-6 sm:p-7">
         <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold text-emerald-700">
@@ -369,7 +439,7 @@ function Explorer({
               {specification.metadata.description && ` · ${specification.metadata.description}`}
             </p>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-3 shrink-0">
             <Button
               variant="outline"
               size="sm"
@@ -382,13 +452,13 @@ function Explorer({
                   doc
                 );
               }}
-              className="gap-1.5 h-8 text-xs font-medium border-sky-200 text-sky-700 bg-sky-50 hover:bg-sky-100"
+              className="gap-2 h-10 px-4 text-xs font-semibold border-sky-200 text-sky-700 bg-sky-50 hover:bg-sky-100 rounded-xl shadow-xs"
               title="Export as OpenAPI 3.1 JSON"
             >
-              <Download className="h-3.5 w-3.5 text-sky-600" />
+              <Download className="h-4 w-4 text-sky-600" />
               Export OAS 3.1
             </Button>
-            <Button variant="outline" size="sm" onClick={onReset} className="h-8 text-xs font-medium">
+            <Button variant="outline" size="sm" onClick={onReset} className="h-10 px-4 text-xs font-semibold rounded-xl">
               Import another file
             </Button>
           </div>
@@ -396,12 +466,12 @@ function Explorer({
 
         {/* Compact Servers Row */}
         {specification.servers.length > 0 && (
-          <div className="mt-4 flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100">
+          <div className="mt-4 flex flex-wrap items-center gap-2.5 pt-3.5 border-t border-slate-100">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Server:</span>
             {specification.servers.map((server) => (
               <span
                 key={server.url}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-mono text-xs text-slate-700"
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1 font-mono text-xs text-slate-700"
               >
                 {server.url}
                 {server.description && (
@@ -414,20 +484,20 @@ function Explorer({
       </section>
 
       {/* 2-Column Explorer: Endpoints & Endpoint Detail */}
-      <div className="grid gap-5 xl:grid-cols-[minmax(280px,0.85fr)_minmax(0,1.65fr)]">
+      <div className="grid gap-6 xl:grid-cols-[minmax(290px,0.85fr)_minmax(0,1.65fr)]">
         {/* Endpoints List Column */}
-        <section className="panel-surface p-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3 px-2">
+        <section className="panel-surface p-5">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3.5 px-2">
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">Endpoints</h3>
-            <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+            <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-[10px] font-semibold text-slate-600">
               {specification.endpoints.length} ops
             </span>
           </div>
-          <div className="mt-3 max-h-[640px] space-y-3.5 overflow-y-auto pr-1">
+          <div className="mt-3.5 max-h-[660px] space-y-4 overflow-y-auto pr-1">
             {Object.entries(groups).map(([tag, endpoints]) => (
               <div key={tag}>
                 <p className="px-2 text-[10px] font-bold uppercase tracking-wider text-slate-400">{tag}</p>
-                <div className="mt-1.5 space-y-1">
+                <div className="mt-2 space-y-1.5">
                   {endpoints.map((endpoint) => {
                     const isSelected = selectedEndpoint?.id === endpoint.id;
                     return (
@@ -435,7 +505,7 @@ function Explorer({
                         key={endpoint.id}
                         type="button"
                         onClick={() => onSelect(endpoint.id)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors ${
+                        className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left transition-colors ${
                           isSelected
                             ? 'bg-slate-900 text-white shadow-xs'
                             : 'hover:bg-slate-100 text-slate-700'
@@ -463,11 +533,12 @@ function Explorer({
         {selectedEndpoint ? (
           <EndpointDetail
             endpoint={selectedEndpoint}
+            serverUrl={specification.servers[0]?.url}
             schemes={specification.securitySchemes}
             onOpen={() => onOpen(selectedEndpoint)}
           />
         ) : (
-          <section className="panel-surface flex min-h-64 items-center justify-center p-6 text-xs text-slate-400">
+          <section className="panel-surface flex min-h-64 items-center justify-center p-8 text-xs text-slate-400">
             Select an endpoint from the left to inspect its definition.
           </section>
         )}
@@ -478,22 +549,26 @@ function Explorer({
 
 function EndpointDetail({
   endpoint,
+  serverUrl,
   schemes,
   onOpen,
 }: {
   endpoint: ApiEndpoint;
+  serverUrl?: string;
   schemes: Record<string, ApiSecurityScheme>;
   onOpen: () => void;
 }) {
+  const resolvedUrl = resolveEndpointUrl(serverUrl, endpoint);
+
   return (
-    <section className="panel-surface p-5 sm:p-6 space-y-5">
-      <div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className={`rounded px-2 py-0.5 text-xs font-bold ${methodColor[endpoint.method]}`}>
+    <section className="panel-surface p-6 sm:p-7 space-y-6">
+      <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <span className={`rounded px-2.5 py-0.5 text-xs font-bold ${methodColor[endpoint.method]}`}>
               {endpoint.method}
             </span>
-            <code className="text-sm font-bold text-slate-800">{endpoint.path}</code>
+            <code className="text-sm font-bold text-slate-800 break-all">{endpoint.path}</code>
             {endpoint.deprecated && (
               <span className="rounded bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-800">
                 Deprecated
@@ -506,9 +581,22 @@ function EndpointDetail({
           {endpoint.description && (
             <p className="mt-1 text-xs leading-relaxed text-slate-600">{endpoint.description}</p>
           )}
+
+          {/* Resolved Target URL Banner */}
+          <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-slate-50/90 px-3.5 py-2.5 font-mono text-xs">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="font-bold text-slate-400 select-none shrink-0 font-sans text-[11px] uppercase tracking-wider">Resolved URL:</span>
+              <span className="truncate text-blue-600 font-semibold">{resolvedUrl}</span>
+            </div>
+          </div>
         </div>
-        <Button onClick={onOpen} size="sm" className="gap-1.5 h-8.5 text-xs font-medium shrink-0">
-          <Send className="h-3.5 w-3.5" />
+
+        <Button
+          onClick={onOpen}
+          size="sm"
+          className="gap-2 h-10 px-5 text-xs font-bold rounded-xl shrink-0 shadow-xs bg-blue-600 hover:bg-blue-700 text-white"
+        >
+          <Send className="h-4 w-4" />
           Open in Request Builder
         </Button>
       </div>

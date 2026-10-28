@@ -3,9 +3,12 @@ import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
 import { formatJson, generateJson } from '@/lib/jsonGenerator';
+import { openApiService } from '@/services/openapiService';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
 
 export function JsonGeneratorPage() {
   const specification = useAppStore((state) => state.activeSpecification);
+  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
   const [schemaId, setSchemaId] = useState('');
   const [text, setText] = useState('');
   const [message, setMessage] = useState('');
@@ -105,8 +108,25 @@ export function JsonGeneratorPage() {
         </div>
 
         {!specification ? (
-          <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-500">
-            No specification imported. You can still format and validate JSON, but schema generation is unavailable.
+          <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-500">
+            <span>No specification imported. You can format/validate JSON or load the demo User schema.</span>
+            <Button
+              size="sm"
+              variant="outline"
+              className="text-xs h-7 shrink-0"
+              onClick={async () => {
+                const res = await openApiService.importSpecification(
+                  'user-management-api.json',
+                  USER_MANAGEMENT_SPEC_JSON
+                );
+                if (res.success && res.specification) {
+                  setActiveSpecification(res.specification);
+                  setSchemaId('User');
+                }
+              }}
+            >
+              Load User Management Schema
+            </Button>
           </div>
         ) : schemas.length === 0 ? (
           <p className="mt-4 text-xs text-slate-400">This specification has no reusable schemas.</p>

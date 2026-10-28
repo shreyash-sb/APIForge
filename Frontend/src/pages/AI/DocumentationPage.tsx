@@ -50,8 +50,12 @@ function exampleFor(content: ApiMediaContent) {
   );
 }
 
+import { openApiService } from '@/services/openapiService';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+
 export function DocumentationPage() {
   const specification = useAppStore((state) => state.activeSpecification);
+  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
   const [search, setSearch] = useState('');
   const [method, setMethod] = useState('All');
   const [copied, setCopied] = useState(false);
@@ -69,9 +73,25 @@ export function DocumentationPage() {
         <p className="mt-2 text-sm text-slate-500">
           Import an OpenAPI specification to generate documentation. No API requests are made.
         </p>
-        <Link to="/openapi">
-          <Button className="mt-5">OpenAPI Import</Button>
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <Link to="/openapi">
+            <Button variant="outline">Go to OpenAPI Import</Button>
+          </Link>
+          <Button
+            onClick={async () => {
+              const res = await openApiService.importSpecification(
+                'user-management-api.json',
+                USER_MANAGEMENT_SPEC_JSON
+              );
+              if (res.success && res.specification) {
+                setActiveSpecification(res.specification);
+              }
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
+            Load User Management Demo Spec
+          </Button>
+        </div>
       </div>
     );
   }

@@ -14,12 +14,14 @@ import {
   TestTube2,
   XCircle,
 } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { testExecutionService } from '@/services/testExecutionService';
 import { validationService, ValidationApiError } from '@/services/validationService';
 import { useAppStore } from '@/store/useAppStore';
+import type { HttpMethod } from '@/types/request.types';
 import type { TestCase, TestCaseType } from '@/types/testCase.types';
 import type { TestCaseExecutionResult } from '@/types/testExecution.types';
 import type {
@@ -27,6 +29,19 @@ import type {
   TestCaseValidationResult,
   ValidationStatus,
 } from '@/types/validation.types';
+
+function resolveTestCaseUrl(rawUrl: string | undefined): string {
+  let url = (rawUrl || '').trim();
+  if (!url) {
+    return 'http://localhost:3001/api/mock/serve/api/users';
+  }
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `http://localhost:3001/api/mock/serve${url.startsWith('/') ? '' : '/'}${url}`;
+  }
+  // Replace any {id} or {param}
+  url = url.replace(/\{[a-zA-Z0-9_-]+\}/g, '101');
+  return url;
+}
 
 // Method badge colors
 const methodColors: Record<string, string> = {
@@ -96,14 +111,17 @@ const typeStyle: Record<TestCaseType, string> = {
 type FilterStatus = 'ALL' | 'VALIDATION_PASSED' | 'VALIDATION_FAILED' | 'NOT_VALIDATABLE' | 'SKIPPED' | 'UNVALIDATED';
 
 export function ResponseValidationPage() {
+  const navigate = useNavigate();
   const specification = useAppStore((state) => state.activeSpecification);
   const generatedTests = useAppStore((state) => state.generatedTests);
   const executionResults = useAppStore((state) => state.executionResults);
+  const updateExecutionResult = useAppStore((state) => state.updateExecutionResult);
   const validationResults = useAppStore((state) => state.validationResults);
   const updateValidationResult = useAppStore((state) => state.updateValidationResult);
   const setValidationResults = useAppStore((state) => state.setValidationResults);
   const validationSummary = useAppStore((state) => state.validationSuiteSummary);
   const setValidationSummary = useAppStore((state) => state.setValidationSuiteSummary);
+  const setRequestDraft = useAppStore((state) => state.setRequestDraft);
 
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | undefined>(
     () => generatedTests[0]?.id
@@ -186,20 +204,61 @@ export function ResponseValidationPage() {
     };
   }, [pairedTests, validationResults]);
 
-  // Validate a single test
-  const handleValidateSingle = async (testCase: TestCase, execResult?: TestCaseExecutionResult) => {
-    if (!execResult) {
-      setApiError(`Test '${testCase.name}' has not been executed yet. Run the test before validating response contract.`);
-      return;
-    }
+  // Open test case in Request Builder with fully resolved URL
+  const handleOpenInRequestBuilder = (testCase: TestCase) => {
+    const finalUrl = resolveTestCaseUrl(testCase.request.url);
+    const queryParams = (testCase.request.queryParams || []).map((qp, idx) => ({
+      id: (qp as { id?: string }).id || `qp-${idx}-${Date.now()}`,
+      key: qp.key,
+      value: qp.value,
+      enabled: qp.enabled !== false,
+    }));
+    const headers = (testCase.request.headers || []).map((h, idx) => ({
+      id: (h as { id?: string }).id || `h-${idx}-${Date.now()}`,
+      key: h.key,
+      value: h.value,
+      enabled: h.enabled !== false,
+    }));
 
+    setRequestDraft({
+      method: testCase.request.method as HttpMethod,
+      url: finalUrl,
+      queryParams,
+      headers,
+      body:
+        typeof testCase.request.body === 'string'
+          ? testCase.request.body
+          : testCase.request.body !== undefined && testCase.request.body !== null
+          ? JSON.stringify(testCase.request.body, null, 2)
+          : '',
+      auth: testCase.request.auth || { type: 'none' },
+    });
+    navigate('/request-builder');
+  };
+
+  // Validate a single test (automatically executes test first if unexecuted)
+  const handleValidateSingle = async (testCase: TestCase, execResult?: TestCaseExecutionResult) => {
     setValidatingSingleId(testCase.id);
     setApiError(null);
 
     try {
+      let activeExec = execResult;
+      if (!activeExec) {
+        const resolvedUrl = resolveTestCaseUrl(testCase.request.url);
+        const executableTestCase: TestCase = {
+          ...testCase,
+          request: {
+            ...testCase.request,
+            url: resolvedUrl,
+          },
+        };
+        activeExec = await testExecutionService.executeSingle(executableTestCase);
+        updateExecutionResult(testCase.id, activeExec);
+      }
+
       const result = await validationService.validateSingle(
         testCase,
-        execResult,
+        activeExec,
         specification?.schemas
       );
       updateValidationResult(testCase.id, result);
@@ -214,17 +273,10 @@ export function ResponseValidationPage() {
     }
   };
 
-  // Validate all executed tests in batch
+  // Validate all executed tests in batch (runs unexecuted tests automatically)
   const handleValidateBatch = async () => {
-    const executableItems = pairedTests
-      .filter((p) => p.executionResult)
-      .map((p) => ({
-        testCase: p.testCase,
-        executionResult: p.executionResult!,
-      }));
-
-    if (!executableItems.length) {
-      setApiError('No executed test results available to validate. Run tests in Test Generator first.');
+    if (!generatedTests.length) {
+      setApiError('No test cases available to validate.');
       return;
     }
 
@@ -232,6 +284,31 @@ export function ResponseValidationPage() {
     setApiError(null);
 
     try {
+      const currentExecutionMap = { ...executionResults };
+      const unexecuted = generatedTests.filter((t) => !currentExecutionMap[t.id]);
+
+      if (unexecuted.length > 0) {
+        const batchToRun = unexecuted.map((t) => ({
+          ...t,
+          request: {
+            ...t.request,
+            url: resolveTestCaseUrl(t.request.url),
+          },
+        }));
+        const suiteExec = await testExecutionService.executeBatch(batchToRun);
+        for (const res of suiteExec.results) {
+          currentExecutionMap[res.testCaseId] = res;
+          updateExecutionResult(res.testCaseId, res);
+        }
+      }
+
+      const executableItems = generatedTests
+        .map((t) => ({
+          testCase: t,
+          executionResult: currentExecutionMap[t.id]!,
+        }))
+        .filter((item) => Boolean(item.executionResult));
+
       const batchResult = await validationService.validateBatch(
         executableItems,
         specification?.schemas
@@ -325,16 +402,16 @@ export function ResponseValidationPage() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link to="/test-generator">
-              <Button variant="outline" size="sm">
-                <ExternalLink className="h-4 w-4" />
+              <Button variant="outline" size="sm" className="h-10 px-4 text-xs font-semibold rounded-xl gap-2 border-slate-200">
+                <ExternalLink className="h-4 w-4 text-slate-500" />
                 Test Generator ({generatedTests.length})
               </Button>
             </Link>
             <Button
               variant="default"
-              className="bg-blue-600 hover:bg-blue-700 text-white"
+              className="h-10 px-5 text-xs font-semibold rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
               onClick={handleValidateBatch}
-              disabled={validatingBatch || executedTestsCount === 0}
+              disabled={validatingBatch || generatedTests.length === 0}
             >
               {validatingBatch ? (
                 <>
@@ -344,7 +421,7 @@ export function ResponseValidationPage() {
               ) : (
                 <>
                   <ShieldCheck className="h-4 w-4" />
-                  Validate All Executed ({executedTestsCount})
+                  Validate All Tests ({generatedTests.length})
                 </>
               )}
             </Button>
@@ -537,18 +614,18 @@ export function ResponseValidationPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-[11px] text-slate-600 hover:text-blue-700 hover:bg-blue-50"
-                          disabled={isValidatingThis || validatingBatch || !executionResult}
+                          className="h-8 px-2.5 text-[11px] text-slate-600 hover:text-blue-700 hover:bg-blue-50 rounded-lg"
+                          disabled={isValidatingThis || validatingBatch}
                           onClick={(e) => {
                             e.stopPropagation();
                             handleValidateSingle(testCase, executionResult);
                           }}
-                          title={executionResult ? 'Validate response contract' : 'Test not executed yet'}
+                          title={executionResult ? 'Validate response contract' : 'Execute & validate test'}
                         >
                           {isValidatingThis ? (
-                            <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+                            <Loader2 className="h-3.5 w-3.5 animate-spin text-blue-600" />
                           ) : (
-                            <ShieldCheck className="h-3.5 w-3.5" />
+                            <ShieldCheck className="h-4 w-4" />
                           )}
                         </Button>
                       </div>
@@ -587,47 +664,64 @@ export function ResponseValidationPage() {
         </div>
 
         {/* Right Column: Assertion Details & Response Inspector (7 cols) */}
-        <div className="space-y-4 lg:col-span-7">
+        <div className="space-y-5 lg:col-span-7">
           {currentPair ? (
-            <div className="panel-surface p-6">
+            <div className="panel-surface p-6 sm:p-7">
               {/* Test Header */}
-              <div className="flex flex-col justify-between gap-3 border-b border-slate-100 pb-4 sm:flex-row sm:items-start">
-                <div>
+              <div className="flex flex-col justify-between gap-4 border-b border-slate-100 pb-5 sm:flex-row sm:items-start">
+                <div className="min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`rounded px-2 py-0.5 text-xs font-bold border ${methodColors[currentPair.testCase.endpoint.method] || 'bg-slate-100'}`}>
+                    <span className={`rounded px-2.5 py-0.5 text-xs font-bold border ${methodColors[currentPair.testCase.endpoint.method] || 'bg-slate-100'}`}>
                       {currentPair.testCase.endpoint.method}
                     </span>
-                    <span className="font-mono text-sm text-slate-800 break-all">
+                    <span className="font-mono text-sm text-slate-800 break-all font-semibold">
                       {currentPair.testCase.endpoint.path}
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border ${typeStyle[currentPair.testCase.type]}`}>
+                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-semibold border ${typeStyle[currentPair.testCase.type]}`}>
                       {currentPair.testCase.type}
                     </span>
                   </div>
-                  <h2 className="mt-1.5 text-base font-semibold text-slate-950">{currentPair.testCase.name}</h2>
+                  <h2 className="mt-2 text-base font-bold text-slate-950">{currentPair.testCase.name}</h2>
                   <p className="text-xs text-slate-500 font-mono mt-0.5">ID: {currentPair.testCase.id}</p>
+
+                  {/* Target URL Banner */}
+                  <div className="mt-3.5 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200/90 bg-slate-50/90 px-3.5 py-2.5 font-mono text-xs">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-bold text-slate-400 select-none shrink-0 font-sans text-[11px] uppercase tracking-wider">Target URL:</span>
+                      <span className="truncate text-blue-600 font-semibold">{resolveTestCaseUrl(currentPair.testCase.request.url)}</span>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
                   <Button
                     size="sm"
-                    className="bg-blue-600 hover:bg-blue-700 text-white"
+                    variant="outline"
+                    className="h-10 px-4 text-xs font-semibold rounded-xl border-slate-200 text-slate-700 hover:bg-slate-50 shadow-xs gap-1.5"
+                    onClick={() => handleOpenInRequestBuilder(currentPair.testCase)}
+                    title="Open this request in Request Builder to inspect parameters and send"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5 text-slate-500" />
+                    Test in Request Builder
+                  </Button>
+                  <Button
+                    size="sm"
+                    className="h-10 px-5 text-xs font-bold rounded-xl bg-blue-600 hover:bg-blue-700 text-white shadow-xs gap-2"
                     disabled={
                       validatingSingleId === currentPair.testCase.id ||
-                      validatingBatch ||
-                      !currentPair.executionResult
+                      validatingBatch
                     }
                     onClick={() => handleValidateSingle(currentPair.testCase, currentPair.executionResult)}
                   >
                     {validatingSingleId === currentPair.testCase.id ? (
                       <>
-                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                        Validating...
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Running &amp; Validating...
                       </>
                     ) : (
                       <>
-                        <ShieldCheck className="h-3.5 w-3.5" />
-                        Validate Contract
+                        <ShieldCheck className="h-4 w-4" />
+                        {currentPair.executionResult ? 'Validate Contract' : 'Run & Validate'}
                       </>
                     )}
                   </Button>
@@ -635,7 +729,7 @@ export function ResponseValidationPage() {
               </div>
 
               {/* Status Banner */}
-              <div className="mt-4">
+              <div className="mt-5">
                 {currentPair.validationResult ? (
                   <div
                     className={`rounded-xl border p-4 ${
@@ -689,13 +783,32 @@ export function ResponseValidationPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-amber-900">
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
-                      <span className="text-xs font-medium">
-                        This test has not been executed yet. Run it from the Test Generator to produce actual HTTP responses.
-                      </span>
+                  <div className="rounded-xl border border-amber-200 bg-amber-50/70 p-4 text-amber-900 flex flex-wrap items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5">
+                      <AlertTriangle className="h-4.5 w-4.5 text-amber-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-bold text-amber-950">Awaiting Real Execution Response</p>
+                        <p className="text-[11px] text-amber-800">Execute this test directly to capture live mock responses and validate against contract schemas.</p>
+                      </div>
                     </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleValidateSingle(currentPair.testCase, undefined)}
+                      disabled={validatingSingleId === currentPair.testCase.id}
+                      className="h-9 px-4 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs gap-1.5"
+                    >
+                      {validatingSingleId === currentPair.testCase.id ? (
+                        <>
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                          Executing...
+                        </>
+                      ) : (
+                        <>
+                          <TestTube2 className="h-3.5 w-3.5" />
+                          Execute &amp; Validate Now
+                        </>
+                      )}
+                    </Button>
                   </div>
                 )}
               </div>

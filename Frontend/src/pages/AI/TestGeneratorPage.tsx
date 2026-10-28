@@ -57,8 +57,12 @@ const executionStatusBadge: Record<
   SKIPPED: { label: 'Skipped', className: 'bg-slate-100 text-slate-500', icon: Clock },
 };
 
+import { openApiService } from '@/services/openapiService';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+
 export function TestGeneratorPage() {
   const specification = useAppStore((state) => state.activeSpecification);
+  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
   const storeGeneratedTests = useAppStore((state) => state.generatedTests);
   const setStoreGeneratedTests = useAppStore((state) => state.setGeneratedTests);
   const storeExecutionResults = useAppStore((state) => state.executionResults);
@@ -105,9 +109,25 @@ export function TestGeneratorPage() {
           The deterministic generator consumes APIForge’s normalized OpenAPI model. Import a specification first; no
           target API requests are sent during generation.
         </p>
-        <Link to="/openapi">
-          <Button className="mt-5">Import OpenAPI</Button>
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <Link to="/openapi">
+            <Button variant="outline">Import OpenAPI</Button>
+          </Link>
+          <Button
+            onClick={async () => {
+              const res = await openApiService.importSpecification(
+                'user-management-api.json',
+                USER_MANAGEMENT_SPEC_JSON
+              );
+              if (res.success && res.specification) {
+                setActiveSpecification(res.specification);
+              }
+            }}
+            className="bg-primary hover:bg-primary/90"
+          >
+            Load User Management Demo Spec
+          </Button>
+        </div>
       </div>
     );
   }

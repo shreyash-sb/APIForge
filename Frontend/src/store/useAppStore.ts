@@ -139,6 +139,88 @@ export const defaultWorkflows: WorkflowScenario[] = [
       },
     ],
   },
+  {
+    id: 'wf-user-management-demo',
+    name: 'User Management Demo Workflow',
+    description: 'Creates Aarav Patil (ID: 101), passes user ID to dependent retrieval, updates profile, and cleans up via teardown',
+    steps: [
+      {
+        id: 'step-create-user',
+        name: 'Create User (POST)',
+        description: 'Creates Aarav Patil on mock server and extracts userId and name',
+        enabled: true,
+        request: {
+          method: 'POST',
+          url: 'http://localhost:3001/api/mock/serve/api/users',
+          headers: [{ id: 'h-post-1', key: 'Content-Type', value: 'application/json', enabled: true }],
+          queryParams: [],
+          body: JSON.stringify({ name: 'Aarav Patil', email: 'aarav@example.com', role: 'student', active: true }, null, 2),
+          auth: { type: 'none' },
+        },
+        extractors: [
+          {
+            targetVariable: 'userId',
+            source: 'BODY_JSONPATH',
+            path: '$.id',
+            defaultValue: '101',
+            isSecret: false,
+          },
+          {
+            targetVariable: 'userName',
+            source: 'BODY_JSONPATH',
+            path: '$.name',
+            defaultValue: 'Aarav Patil',
+            isSecret: false,
+          },
+        ],
+      },
+      {
+        id: 'step-get-user',
+        name: 'Retrieve User (GET)',
+        description: 'Queries user by ID passing {{userId}} extracted from Step 1',
+        enabled: true,
+        dependsOn: ['step-create-user'],
+        request: {
+          method: 'GET',
+          url: 'http://localhost:3001/api/mock/serve/api/users/{{userId}}',
+          headers: [{ id: 'h-get-1', key: 'Accept', value: 'application/json', enabled: true }],
+          queryParams: [],
+          body: '',
+          auth: { type: 'none' },
+        },
+      },
+      {
+        id: 'step-update-user',
+        name: 'Update User (PUT)',
+        description: 'Updates active status and role for {{userId}}',
+        enabled: true,
+        dependsOn: ['step-get-user'],
+        request: {
+          method: 'PUT',
+          url: 'http://localhost:3001/api/mock/serve/api/users/{{userId}}',
+          headers: [{ id: 'h-put-1', key: 'Content-Type', value: 'application/json', enabled: true }],
+          queryParams: [],
+          body: JSON.stringify({ id: 101, name: 'Aarav Patil', email: 'aarav@example.com', role: 'student', active: true }, null, 2),
+          auth: { type: 'none' },
+        },
+      },
+      {
+        id: 'step-delete-user',
+        name: 'Teardown Cleanup (DELETE)',
+        description: 'Teardown step: deletes temporary demo user 101',
+        enabled: true,
+        isTeardown: true,
+        request: {
+          method: 'DELETE',
+          url: 'http://localhost:3001/api/mock/serve/api/users/{{userId}}',
+          headers: [],
+          queryParams: [],
+          body: '',
+          auth: { type: 'none' },
+        },
+      },
+    ],
+  },
 ];
 
 // ---------------------------------------------------------------------------
