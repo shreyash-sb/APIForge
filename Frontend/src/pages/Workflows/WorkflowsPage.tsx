@@ -1,9 +1,11 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
   Copy,
+  Download,
   Eye,
+  FileUp,
   Layers,
   Loader2,
   Play,
@@ -175,8 +177,51 @@ export function WorkflowsPage() {
     }
   };
 
+  const workflowInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImportWorkflowFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const parsed = JSON.parse(text);
+      if (parsed && Array.isArray(parsed.steps)) {
+        const newId = createWorkflow({
+          name: parsed.name || file.name.replace(/\.json$/i, ''),
+          description: parsed.description || 'Imported workflow scenario',
+          steps: parsed.steps,
+        });
+        setActiveWorkflowId(newId);
+      } else {
+        alert('Invalid workflow file. Expected a JSON object with a "steps" array.');
+      }
+    } catch (err) {
+      alert('Failed to parse workflow JSON: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      if (workflowInputRef.current) workflowInputRef.current.value = '';
+    }
+  };
+
+  const handleExportWorkflow = () => {
+    if (!activeWorkflow) return;
+    const blob = new Blob([JSON.stringify(activeWorkflow, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${activeWorkflow.name.toLowerCase().replace(/[^a-z0-9_-]/g, '_')}-workflow.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="space-y-6">
+      <input
+        ref={workflowInputRef}
+        type="file"
+        accept=".json"
+        className="hidden"
+        onChange={handleImportWorkflowFile}
+      />
       {/* Unified Workflow Header & Scenario Controls */}
       <section className="panel-surface p-5 sm:p-6 border border-slate-200/80 bg-white space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -253,6 +298,24 @@ export function WorkflowsPage() {
               className="gap-1.5 text-xs font-semibold h-8.5 px-3"
             >
               <Plus className="h-3.5 w-3.5" /> New Scenario
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => workflowInputRef.current?.click()}
+              className="gap-1.5 text-xs font-semibold h-8.5 px-3 border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100"
+              title="Import a workflow scenario from a JSON file (e.g. from demo folder)"
+            >
+              <FileUp className="h-3.5 w-3.5" /> Import JSON
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportWorkflow}
+              className="gap-1.5 text-xs font-semibold text-slate-600 h-8.5 px-3"
+              title="Export current workflow scenario as JSON"
+            >
+              <Download className="h-3.5 w-3.5" /> Export
             </Button>
             <Button
               variant="outline"
