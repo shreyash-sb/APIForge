@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import {
   AlertCircle,
   CheckCircle2,
+  ChevronDown,
   Copy,
   Download,
   Eye,
@@ -309,98 +310,143 @@ export function WorkflowsPage() {
         </div>
 
         {/* Scenario & Target Environment Controls Bar */}
-        <div className="flex flex-wrap items-center justify-between gap-3.5 pt-4 border-t border-slate-100">
-          <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Scenario:</span>
-            <select
-              value={activeWorkflow?.id}
-              onChange={(e) => handleScenarioChange(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-800 shadow-xs focus:border-violet-500 focus:outline-none"
-            >
-              {workflows.map((wf) => (
-                <option key={wf.id} value={wf.id}>
-                  {wf.name} ({wf.steps.length} steps)
-                </option>
-              ))}
-            </select>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadUserManagementDemo}
-              className="gap-1.5 text-xs font-semibold h-8.5 px-3 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-xl"
-              title="Load User Management Lifecycle Workflow (Aarav Patil)"
-            >
-              <Users className="h-3.5 w-3.5 text-sky-600" />
-              User Lifecycle
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={loadEcommerceDemo}
-              className="gap-1.5 text-xs font-semibold h-8.5 px-3 border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
-              title="Load QuickCart E-Commerce Order Checkout Workflow"
-            >
-              <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
-              QuickCart Checkout
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleCreateNewWorkflow}
-              className="gap-1.5 text-xs font-semibold h-8.5 px-3"
-            >
-              <Plus className="h-3.5 w-3.5" /> New Scenario
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => workflowInputRef.current?.click()}
-              className="gap-1.5 text-xs font-semibold h-8.5 px-3 border-violet-200 text-violet-700 bg-violet-50 hover:bg-violet-100"
-              title="Import a workflow scenario from a JSON file (e.g. from demo folder)"
-            >
-              <FileUp className="h-3.5 w-3.5" /> Import JSON
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleExportWorkflow}
-              className="gap-1.5 text-xs font-semibold text-slate-600 h-8.5 px-3"
-              title="Export current workflow scenario as JSON"
-            >
-              <Download className="h-3.5 w-3.5" /> Export
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => activeWorkflow && duplicateWorkflow(activeWorkflow.id)}
-              className="gap-1.5 text-xs font-semibold text-slate-600 h-8.5 px-3"
-            >
-              <Copy className="h-3.5 w-3.5" /> Duplicate
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={workflows.length <= 1}
-              onClick={() => activeWorkflow && deleteWorkflow(activeWorkflow.id)}
-              className="gap-1.5 text-xs font-semibold text-rose-600 border-rose-200 hover:bg-rose-50 h-8.5 px-3"
-            >
-              <Trash2 className="h-3.5 w-3.5" /> Delete
-            </Button>
+        <div className="rounded-xl border border-slate-200/80 bg-slate-50/70 p-3 sm:p-3.5 space-y-3">
+          {/* Row 1: Active Scenario Selection & Target Environment */}
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            {/* Left: Scenario Selector & Active Actions */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 shrink-0">
+                Scenario:
+              </span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={activeWorkflow?.id}
+                  onChange={(e) => handleScenarioChange(e.target.value)}
+                  className="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 shadow-xs transition-colors hover:border-slate-300 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer min-w-[210px]"
+                >
+                  {workflows.map((wf) => (
+                    <option key={wf.id} value={wf.id}>
+                      {wf.name} ({wf.steps.length} steps)
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-slate-400" />
+              </div>
+
+              {/* Action buttons directly bound to the active scenario */}
+              <div className="flex items-center gap-1.5">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => activeWorkflow && duplicateWorkflow(activeWorkflow.id)}
+                  className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-lg border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-xs"
+                  title="Duplicate current workflow scenario"
+                >
+                  <Copy className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Duplicate</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleExportWorkflow}
+                  className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-lg border-slate-200 text-slate-700 bg-white hover:bg-slate-50 shadow-xs"
+                  title="Export current workflow scenario as JSON"
+                >
+                  <Download className="h-3.5 w-3.5 text-slate-500" />
+                  <span>Export</span>
+                </Button>
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={workflows.length <= 1}
+                  onClick={() => activeWorkflow && deleteWorkflow(activeWorkflow.id)}
+                  className="h-9 px-3 gap-1.5 text-xs font-semibold rounded-lg border-rose-200 text-rose-600 bg-white hover:bg-rose-50 hover:border-rose-300 disabled:opacity-40 shadow-xs"
+                  title="Delete current workflow scenario"
+                >
+                  <Trash2 className="h-3.5 w-3.5 text-rose-500" />
+                  <span>Delete</span>
+                </Button>
+              </div>
+            </div>
+
+            {/* Right: Target Environment Selector */}
+            <div className="flex items-center gap-2.5 shrink-0">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 shrink-0">
+                Target Environment:
+              </span>
+              <div className="relative inline-flex items-center">
+                <select
+                  value={activeEnvironmentId}
+                  onChange={(e) => setActiveEnvironmentId(e.target.value)}
+                  className="h-9 appearance-none rounded-lg border border-slate-200 bg-white pl-3 pr-8 text-xs sm:text-sm font-semibold text-slate-800 shadow-xs transition-colors hover:border-slate-300 focus:border-violet-500 focus:outline-none focus:ring-1 focus:ring-violet-500 cursor-pointer min-w-[190px]"
+                >
+                  {environments.map((env) => (
+                    <option key={env.id} value={env.id}>
+                      {env.name} ({env.variables.length} vars)
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-2.5 h-3.5 w-3.5 text-slate-400" />
+              </div>
+            </div>
           </div>
 
-          <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Target Environment:</span>
-            <select
-              value={activeEnvironmentId}
-              onChange={(e) => setActiveEnvironmentId(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-semibold text-slate-800 shadow-xs focus:border-violet-500 focus:outline-none"
-            >
-              {environments.map((env) => (
-                <option key={env.id} value={env.id}>
-                  {env.name} ({env.variables.length} vars)
-                </option>
-              ))}
-            </select>
+          {/* Row 2: Scenario Creation & Quick-Start Templates */}
+          <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between pt-2.5 border-t border-slate-200/70">
+            {/* Left: Create New Scenario & Import */}
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCreateNewWorkflow}
+                className="h-9 px-3.5 gap-1.5 text-xs font-semibold rounded-lg border-slate-300 text-slate-800 bg-white hover:bg-slate-50 shadow-xs"
+              >
+                <Plus className="h-3.5 w-3.5 text-slate-600" />
+                <span>New Scenario</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => workflowInputRef.current?.click()}
+                className="h-9 px-3.5 gap-1.5 text-xs font-semibold rounded-lg border-violet-200 text-violet-700 bg-violet-50/80 hover:bg-violet-100 shadow-xs"
+                title="Import a workflow scenario from a JSON file (e.g. from demo folder)"
+              >
+                <FileUp className="h-3.5 w-3.5 text-violet-600" />
+                <span>Import JSON</span>
+              </Button>
+            </div>
+
+            {/* Right: Quick Demo Scenarios / Templates */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5 mr-0.5">
+                <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                Templates:
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadUserManagementDemo}
+                className="h-9 px-3.5 gap-1.5 text-xs font-semibold rounded-lg border-sky-200 text-sky-800 bg-sky-50/80 hover:bg-sky-100 shadow-xs transition-colors"
+                title="Load User Management Lifecycle Workflow (Aarav Patil)"
+              >
+                <Users className="h-3.5 w-3.5 text-sky-600" />
+                <span>User Lifecycle</span>
+              </Button>
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadEcommerceDemo}
+                className="h-9 px-3.5 gap-1.5 text-xs font-semibold rounded-lg border-emerald-200 text-emerald-800 bg-emerald-50/80 hover:bg-emerald-100 shadow-xs transition-colors"
+                title="Load QuickCart E-Commerce Order Checkout Workflow"
+              >
+                <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+                <span>QuickCart Checkout</span>
+              </Button>
+            </div>
           </div>
         </div>
 
@@ -491,7 +537,7 @@ export function WorkflowsPage() {
                 value={activeWorkflow.description || ''}
                 onChange={(e) => updateWorkflow(activeWorkflow.id, { description: e.target.value })}
                 placeholder="Description of this multi-step test scenario"
-                className="text-xs sm:text-sm text-slate-600 max-w-xl h-8.5 bg-white"
+                className="text-xs sm:text-sm text-slate-600 max-w-xl h-9 bg-white"
               />
             </div>
 
