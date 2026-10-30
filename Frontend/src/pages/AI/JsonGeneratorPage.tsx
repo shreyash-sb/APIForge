@@ -1,10 +1,11 @@
-import { Copy, Download, Sparkles, Check, Code } from 'lucide-react';
+import { Copy, Download, Sparkles, Check, Code, ShoppingBag, Users } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
 import { formatJson, generateJson } from '@/lib/jsonGenerator';
 import { openApiService } from '@/services/openapiService';
 import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
 
 export function JsonGeneratorPage() {
   const specification = useAppStore((state) => state.activeSpecification);
@@ -109,24 +110,45 @@ export function JsonGeneratorPage() {
 
         {!specification ? (
           <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-500">
-            <span>No specification imported. You can format/validate JSON or load the demo User schema.</span>
-            <Button
-              size="sm"
-              variant="outline"
-              className="text-xs h-7 shrink-0"
-              onClick={async () => {
-                const res = await openApiService.importSpecification(
-                  'user-management-api.json',
-                  USER_MANAGEMENT_SPEC_JSON
-                );
-                if (res.success && res.specification) {
-                  setActiveSpecification(res.specification);
-                  setSchemaId('User');
-                }
-              }}
-            >
-              Load User Management Schema
-            </Button>
+            <span>No specification imported. Choose a demo schema to immediately generate valid synthetic JSON:</span>
+            <div className="flex items-center gap-2 shrink-0">
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-7 gap-1 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100"
+                onClick={async () => {
+                  const res = await openApiService.importSpecification(
+                    'user-management-api.json',
+                    USER_MANAGEMENT_SPEC_JSON
+                  );
+                  if (res.success && res.specification) {
+                    setActiveSpecification(res.specification);
+                    setSchemaId('User');
+                  }
+                }}
+              >
+                <Users className="h-3.5 w-3.5 text-sky-600" />
+                User Schema
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="text-xs h-7 gap-1 border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+                onClick={async () => {
+                  const res = await openApiService.importSpecification(
+                    'ecommerce-store-api.json',
+                    ECOMMERCE_SPEC_JSON
+                  );
+                  if (res.success && res.specification) {
+                    setActiveSpecification(res.specification);
+                    setSchemaId('Product');
+                  }
+                }}
+              >
+                <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+                Product Schema
+              </Button>
+            </div>
           </div>
         ) : schemas.length === 0 ? (
           <p className="mt-4 text-xs text-slate-400">This specification has no reusable schemas.</p>

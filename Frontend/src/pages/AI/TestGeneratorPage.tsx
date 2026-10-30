@@ -10,7 +10,9 @@ import {
   Loader2,
   Play,
   RefreshCw,
+  ShoppingBag,
   Trash2,
+  Users,
   XCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -20,6 +22,9 @@ import { Input } from '@/components/ui/input';
 import { testGeneratorService } from '@/services/testGeneratorService';
 import { testExecutionService } from '@/services/testExecutionService';
 import { useAppStore } from '@/store/useAppStore';
+import { openApiService } from '@/services/openapiService';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
 import type { TestCase, TestCaseType, TestGenerationSettings } from '@/types/testCase.types';
 import type {
   TestCaseExecutionResult,
@@ -56,9 +61,6 @@ const executionStatusBadge: Record<
   ERROR: { label: 'Execution Error', className: 'bg-rose-100 text-rose-800', icon: XCircle },
   SKIPPED: { label: 'Skipped', className: 'bg-slate-100 text-slate-500', icon: Clock },
 };
-
-import { openApiService } from '@/services/openapiService';
-import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
 
 export function TestGeneratorPage() {
   const specification = useAppStore((state) => state.activeSpecification);
@@ -123,9 +125,25 @@ export function TestGeneratorPage() {
                 setActiveSpecification(res.specification);
               }
             }}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-sky-600 hover:bg-sky-700 text-white gap-1.5"
           >
-            Load User Management Demo Spec
+            <Users className="h-4 w-4" />
+            + User API Spec
+          </Button>
+          <Button
+            onClick={async () => {
+              const res = await openApiService.importSpecification(
+                'ecommerce-store-api.json',
+                ECOMMERCE_SPEC_JSON
+              );
+              if (res.success && res.specification) {
+                setActiveSpecification(res.specification);
+              }
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            + QuickCart Spec
           </Button>
         </div>
       </div>

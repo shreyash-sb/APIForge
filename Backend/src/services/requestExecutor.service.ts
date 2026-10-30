@@ -133,6 +133,17 @@ export class RequestExecutorService {
       };
     }
 
+    // Validate payload size
+    if (request.body && Buffer.byteLength(request.body, 'utf8') > MAX_HTTP_PAYLOAD_BYTES) {
+      return {
+        success: false,
+        error: {
+          type: 'VALIDATION_ERROR',
+          message: `Request body exceeds maximum allowed size of ${MAX_HTTP_PAYLOAD_BYTES} bytes`,
+        },
+      };
+    }
+
     // Validate JSON body if present
     if (request.body && request.body.trim() !== '') {
       try {

@@ -1,9 +1,7 @@
 import {
   Activity,
   Bell,
-  Check,
   CheckCheck,
-  ChevronDown,
   Globe,
   Menu,
   Shield,
@@ -12,13 +10,13 @@ import {
   Zap,
 } from "lucide-react";
 import { useState, useRef, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAppStore } from "@/store/useAppStore";
 
-import type { AppNotification, NotificationType } from "@/types/notification.types";
+import type { NotificationType } from "@/types/notification.types";
 
 const NOTIF_COLORS: Record<NotificationType, { bg: string; border: string; iconCls: string; dot: string }> = {
   success: { bg: "bg-emerald-50/70", border: "border-emerald-100", iconCls: "text-emerald-500", dot: "bg-emerald-500" },
@@ -40,9 +38,6 @@ export function Header() {
   const { title } = usePageTitle();
   const {
     toggleSidebar,
-    environments,
-    activeEnvironmentId,
-    setActiveEnvironmentId,
     notifications,
     markNotificationRead,
     markAllNotificationsRead,
@@ -50,20 +45,13 @@ export function Header() {
     clearNotifications,
   } = useAppStore();
 
-  const [envMenuOpen, setEnvMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
-
   const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const envMenuRef = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  // Close menus on outside click
+  // Close notifications menu on outside click
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
-      if (envMenuRef.current && !envMenuRef.current.contains(event.target as Node)) {
-        setEnvMenuOpen(false);
-      }
       if (notifRef.current && !notifRef.current.contains(event.target as Node)) {
         setNotifOpen(false);
       }
@@ -71,9 +59,6 @@ export function Header() {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  const activeEnv = environments.find((e) => e.id === activeEnvironmentId) || environments[0];
-  const activeVarsCount = (activeEnv?.variables || []).filter((v) => v.enabled).length;
 
   return (
     <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur-md transition-all">
@@ -94,90 +79,8 @@ export function Header() {
           </h1>
         </div>
 
-        {/* ── Right: Desktop controls with clean alignment ── */}
-        <div className="hidden shrink-0 items-center gap-2.5 md:flex">
-
-          {/* Environment Switcher */}
-          <div className="relative" ref={envMenuRef}>
-            <button
-              type="button"
-              onClick={() => setEnvMenuOpen(!envMenuOpen)}
-              className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 px-2.5 sm:px-3 lg:px-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm"
-              title={`Active Environment: ${activeEnv?.name || "Local"} (${activeVarsCount} active variables)`}
-            >
-              <Globe className="h-4 w-4 shrink-0 text-blue-500" />
-              <span className="max-w-[70px] sm:max-w-[95px] lg:max-w-[130px] truncate">{activeEnv?.name || "Local"}</span>
-              <span className="hidden xl:inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
-                {activeVarsCount} vars
-              </span>
-              <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
-              <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-            </button>
-            {envMenuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-2xl shadow-slate-200/70 animate-in fade-in zoom-in-95 duration-150">
-                <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
-                  <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
-                    <Globe className="h-3.5 w-3.5 text-blue-600" />
-                    Environments
-                  </span>
-                  <span className="text-[10px] font-semibold text-slate-400">
-                    {environments.length} available
-                  </span>
-                </div>
-                <div className="py-1.5 space-y-1">
-                  {environments.map((env) => {
-                    const count = (env.variables || []).filter((v) => v.enabled).length;
-                    const isActive = env.id === activeEnvironmentId;
-                    const displayUrl = env.baseUrl ? env.baseUrl.replace(/^https?:\/\//, '') : 'No URL';
-                    return (
-                      <button
-                        key={env.id}
-                        type="button"
-                        onClick={() => { setActiveEnvironmentId(env.id); setEnvMenuOpen(false); }}
-                        className={`flex w-full items-center justify-between rounded-xl px-2.5 py-2 text-left text-xs transition-colors ${
-                          isActive
-                            ? "bg-blue-50/80 font-semibold text-blue-900 border border-blue-200/60"
-                            : "text-slate-700 hover:bg-slate-50 border border-transparent"
-                        }`}
-                      >
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span
-                            className={`h-2 w-2 rounded-full shrink-0 ${
-                              isActive ? "bg-emerald-500 ring-2 ring-emerald-200" : "bg-slate-300"
-                            }`}
-                          />
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="truncate font-semibold text-xs text-slate-900">{env.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 font-mono text-slate-500 font-normal">
-                                {count}v
-                              </span>
-                            </div>
-                            <span className="block truncate font-mono text-[10px] text-slate-400">
-                              {displayUrl}
-                            </span>
-                          </div>
-                        </div>
-                        {isActive && <Check className="ml-2 h-4 w-4 shrink-0 text-blue-600" />}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="border-t border-slate-100 pt-1.5">
-                  <Link
-                    to="/environments"
-                    onClick={() => setEnvMenuOpen(false)}
-                    className="flex items-center justify-center gap-1 rounded-lg px-2.5 py-1.5 text-center text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-50 hover:text-blue-700"
-                  >
-                    Manage Environments →
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-
-
-
+        {/* ── Right: Clean, focused controls ── */}
+        <div className="flex shrink-0 items-center gap-2.5">
           {/* Notifications Bell */}
           <div className="relative" ref={notifRef}>
             <button
@@ -296,26 +199,8 @@ export function Header() {
               </div>
             )}
           </div>
-
         </div>
-
-        {/* ── Mobile controls ── */}
-        <div className="flex items-center gap-2 md:hidden">
-          <button
-            type="button"
-            onClick={() => setNotifOpen(!notifOpen)}
-            className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 text-slate-600 hover:bg-slate-50 transition-colors"
-            title="Notifications"
-            aria-label="Notifications"
-          >
-            <Bell className="h-3.5 w-3.5" />
-            {unreadCount > 0 && <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-blue-600" />}
-          </button>
-        </div>
-
       </div>
-
     </header>
   );
 }
-

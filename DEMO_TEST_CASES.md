@@ -89,8 +89,8 @@
 ### TC-03: OpenAPI Import
 - **Feature:** OpenAPI Import
 - **Objective:** Verify parsing of valid OpenAPI 3.1 specifications and graceful rejection of malformed or invalid inputs.
-- **Preconditions:** Spec file `demo/user-management-api.json` exists.
-- **Test Input 1 (Positive):** `demo/user-management-api.json` (OpenAPI 3.1, 5 endpoints).
+- **Preconditions:** Spec file `demo/project-1-user-management/user-management-api.json` exists.
+- **Test Input 1 (Positive):** `demo/project-1-user-management/user-management-api.json` (OpenAPI 3.1, 5 endpoints).
 - **Test Input 2 (Negative):** Malformed JSON string `{"openapi": "3.1.0"}` without paths or metadata.
 - **Execution Procedure:**
   1. Navigate to `/openapi`.

@@ -571,6 +571,20 @@ export class MockServerService {
       }
     }
 
+    // 3. Fallback: try matching with or without /api prefix for maximum flexibility
+    const altIncoming = normIncoming.startsWith('/api/')
+      ? this.normalizePath(normIncoming.slice(4))
+      : this.normalizePath(`/api${normIncoming}`);
+
+    const altExactMatch = enabledRoutes.find((r) => this.normalizePath(r.path) === altIncoming);
+    if (altExactMatch) return altExactMatch;
+
+    for (const route of enabledRoutes) {
+      if (this.isPathMatch(route.path, altIncoming)) {
+        return route;
+      }
+    }
+
     return undefined;
   }
 
@@ -594,9 +608,13 @@ export class MockServerService {
     const urlObj = new URL(rawUrl, 'http://localhost');
     let targetPath = urlObj.pathname;
 
-    // Strip mock server base prefix if present (/api/mock/serve)
+    // Strip mock server base prefix if present (/api/mock/serve, /mock/serve, /serve)
     if (targetPath.startsWith('/api/mock/serve')) {
       targetPath = targetPath.slice('/api/mock/serve'.length) || '/';
+    } else if (targetPath.startsWith('/mock/serve')) {
+      targetPath = targetPath.slice('/mock/serve'.length) || '/';
+    } else if (targetPath.startsWith('/serve')) {
+      targetPath = targetPath.slice('/serve'.length) || '/';
     }
 
     const matchedRoute = this.matchRoute(method, targetPath);

@@ -19,6 +19,8 @@ import {
   CheckCircle2,
   XCircle,
   FolderKanban,
+  ShoppingBag,
+  Users,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -664,6 +666,45 @@ export function RequestBuilderPage() {
             >
               <FileDown className="h-3.5 w-3.5 mr-1 text-blue-600" />
               Import Request
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setMethod('POST');
+                setUrl('http://localhost:3001/api/mock/serve/api/users');
+                setBody(JSON.stringify({ name: 'Aarav Patil', email: 'aarav@example.com', role: 'student', active: true }, null, 2));
+                setHeaders([
+                  { id: crypto.randomUUID(), key: 'Content-Type', value: 'application/json', enabled: true },
+                  { id: crypto.randomUUID(), key: 'Accept', value: 'application/json', enabled: true },
+                ]);
+                setQueryParams([]);
+              }}
+              className="h-8.5 text-xs font-semibold gap-1.5 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100"
+              title="1-Click Load User Creation Request (POST /api/users)"
+            >
+              <Users className="h-3.5 w-3.5 text-sky-600" />
+              + User API
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setMethod('GET');
+                setUrl('http://localhost:3001/api/mock/serve/api/products?category=electronics');
+                setBody('');
+                setHeaders([
+                  { id: crypto.randomUUID(), key: 'Accept', value: 'application/json', enabled: true },
+                ]);
+                setQueryParams([
+                  { id: crypto.randomUUID(), key: 'category', value: 'electronics', enabled: true },
+                ]);
+              }}
+              className="h-8.5 text-xs font-semibold gap-1.5 border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+              title="Load QuickCart Products Request (GET /api/products)"
+            >
+              <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+              + QuickCart Store
             </Button>
             <Button
               variant="outline"

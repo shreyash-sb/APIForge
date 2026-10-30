@@ -13,18 +13,22 @@ import {
   ShieldCheck,
   Trash2,
   Workflow,
+  Users,
+  ShoppingBag,
+  Sparkles,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { WorkflowStepCard } from '@/components/workflows/WorkflowStepCard';
 import { WorkflowExecutionView } from '@/components/workflows/WorkflowExecutionView';
 import { workflowService, WorkflowApiError } from '@/services/workflowService';
-import { useAppStore } from '@/store/useAppStore';
+import { useAppStore, defaultWorkflows } from '@/store/useAppStore';
 import type { WorkflowStep } from '@/types/workflow.types';
 
 export function WorkflowsPage() {
   const {
     workflows,
+    setWorkflows,
     activeWorkflowId,
     setActiveWorkflowId,
     createWorkflow,
@@ -64,6 +68,34 @@ export function WorkflowsPage() {
   const handleScenarioChange = (newId: string) => {
     setValidationResult(null);
     setActiveWorkflowId(newId);
+  };
+
+  const loadUserManagementDemo = () => {
+    setValidationResult(null);
+    const existing = workflows.find((w) => w.id === 'wf-user-management-demo');
+    if (existing) {
+      setActiveWorkflowId(existing.id);
+    } else {
+      const demo = defaultWorkflows.find((w) => w.id === 'wf-user-management-demo');
+      if (demo) {
+        setWorkflows([...workflows, demo]);
+        setActiveWorkflowId(demo.id);
+      }
+    }
+  };
+
+  const loadEcommerceDemo = () => {
+    setValidationResult(null);
+    const existing = workflows.find((w) => w.id === 'wf-ecommerce-checkout-demo');
+    if (existing) {
+      setActiveWorkflowId(existing.id);
+    } else {
+      const demo = defaultWorkflows.find((w) => w.id === 'wf-ecommerce-checkout-demo');
+      if (demo) {
+        setWorkflows([...workflows, demo]);
+        setActiveWorkflowId(demo.id);
+      }
+    }
   };
 
   const handleValidate = async () => {
@@ -291,6 +323,26 @@ export function WorkflowsPage() {
                 </option>
               ))}
             </select>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadUserManagementDemo}
+              className="gap-1.5 text-xs font-semibold h-8.5 px-3 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100 rounded-xl"
+              title="Load User Management Lifecycle Workflow (Aarav Patil)"
+            >
+              <Users className="h-3.5 w-3.5 text-sky-600" />
+              User Lifecycle
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadEcommerceDemo}
+              className="gap-1.5 text-xs font-semibold h-8.5 px-3 border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100 rounded-xl"
+              title="Load QuickCart E-Commerce Order Checkout Workflow"
+            >
+              <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+              QuickCart Checkout
+            </Button>
             <Button
               variant="outline"
               size="sm"

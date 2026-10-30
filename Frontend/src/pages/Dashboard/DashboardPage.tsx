@@ -5,6 +5,7 @@ import {
   Loader2,
   RefreshCw,
   ShieldAlert,
+  Sparkles,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -33,12 +34,7 @@ export function DashboardPage() {
     collections,
     agentTasks,
     setAgentTasks,
-    environments,
-    activeEnvironmentId,
   } = useAppStore();
-
-  const activeEnv = environments.find((e) => e.id === activeEnvironmentId) || environments[0];
-  const activeVarsCount = (activeEnv?.variables || []).filter((v) => v.enabled).length;
 
   const [health, setHealth] = useState<HealthCheck | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
@@ -97,9 +93,9 @@ export function DashboardPage() {
 
   return (
     <div className="space-y-6">
-      {/* ── 1. Clean & Focused Welcome Header with Active Environment ── */}
+      {/* ── 1. Clean & Focused Welcome Header ── */}
       <section className="panel-surface p-5 border border-slate-200/80">
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900">
               Welcome back, {currentUser.name}
@@ -109,32 +105,12 @@ export function DashboardPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2.5">
-            {/* Inline Active Environment Badge */}
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50/80 px-3 py-1.5 text-xs">
-              <span className="flex h-2 w-2 rounded-full bg-emerald-500 shrink-0" />
-              <span className="font-semibold text-slate-800">{activeEnv?.name || "Local"}</span>
-              <span className="hidden sm:inline font-mono text-[11px] text-slate-400 max-w-[160px] truncate">
-                {activeEnv?.baseUrl || "No base URL"}
-              </span>
-              <span className="rounded bg-slate-200/80 px-1.5 py-0.2 text-[10px] font-bold text-slate-600">
-                {activeVarsCount}v
-              </span>
-              <Link
-                to="/environments"
-                className="font-semibold text-blue-600 hover:text-blue-700 hover:underline ml-0.5 text-xs"
-              >
-                Manage &rarr;
-              </Link>
-            </div>
-
-            {events.length ? (
-              <Link to="/reports" className={buttonVariants({ variant: "outline", size: "sm" })}>
-                View Reports
-                <ArrowRight className="h-3.5 w-3.5 ml-1" />
-              </Link>
-            ) : null}
-          </div>
+          {events.length ? (
+            <Link to="/reports" className={buttonVariants({ variant: "outline", size: "sm" })}>
+              View Reports
+              <ArrowRight className="h-3.5 w-3.5 ml-1" />
+            </Link>
+          ) : null}
         </div>
       </section>
 

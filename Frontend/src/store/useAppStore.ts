@@ -32,7 +32,7 @@ export const defaultEnvironments: FrontendEnvironmentProfile[] = [
     id: 'env-local',
     name: 'Local',
     description: 'Local development environment on localhost',
-    baseUrl: 'http://localhost:3000',
+    baseUrl: 'http://localhost:3001/api/mock/serve',
     isDefault: true,
     createdAt: new Date().toISOString(),
     variables: [
@@ -73,72 +73,6 @@ export const defaultEnvironments: FrontendEnvironmentProfile[] = [
 ];
 
 export const defaultWorkflows: WorkflowScenario[] = [
-  {
-    id: 'wf-user-order-flow',
-    name: 'User & Order Lifecycle',
-    description: 'Authenticates a user, extracts the token, queries user details, and executes cleanup',
-    steps: [
-      {
-        id: 'step-auth',
-        name: 'User Authentication',
-        description: 'Exchange credentials for session token',
-        enabled: true,
-        request: {
-          method: 'POST',
-          url: '{{baseUrl}}/api/v1/auth/login',
-          headers: [{ id: 'h1', key: 'Content-Type', value: 'application/json', enabled: true }],
-          queryParams: [],
-          body: JSON.stringify({ username: 'developer', apiKey: '{{apiKey}}' }, null, 2),
-          auth: { type: 'none' },
-        },
-        extractors: [
-          {
-            targetVariable: 'sessionToken',
-            source: 'BODY_JSONPATH',
-            path: '$.token',
-            isSecret: true,
-          },
-          {
-            targetVariable: 'userId',
-            source: 'BODY_JSONPATH',
-            path: '$.userId',
-            defaultValue: '101',
-            isSecret: false,
-          },
-        ],
-      },
-      {
-        id: 'step-profile',
-        name: 'Fetch Profile',
-        description: 'Fetch profile using extracted session token',
-        enabled: true,
-        dependsOn: ['step-auth'],
-        request: {
-          method: 'GET',
-          url: '{{baseUrl}}/api/v1/users/{{userId}}',
-          headers: [{ id: 'h2', key: 'Authorization', value: 'Bearer {{sessionToken}}', enabled: true }],
-          queryParams: [],
-          body: '',
-          auth: { type: 'none' },
-        },
-      },
-      {
-        id: 'step-cleanup',
-        name: 'Logout & Session Cleanup',
-        description: 'Invalidate temporary session token upon scenario completion',
-        enabled: true,
-        isTeardown: true,
-        request: {
-          method: 'POST',
-          url: '{{baseUrl}}/api/v1/auth/logout',
-          headers: [{ id: 'h3', key: 'Authorization', value: 'Bearer {{sessionToken}}', enabled: true }],
-          queryParams: [],
-          body: '',
-          auth: { type: 'none' },
-        },
-      },
-    ],
-  },
   {
     id: 'wf-user-management-demo',
     name: 'User Management Demo Workflow',
@@ -214,6 +148,181 @@ export const defaultWorkflows: WorkflowScenario[] = [
           method: 'DELETE',
           url: 'http://localhost:3001/api/mock/serve/api/users/{{userId}}',
           headers: [],
+          queryParams: [],
+          body: '',
+          auth: { type: 'none' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'wf-ecommerce-checkout-demo',
+    name: 'E-Commerce Order Checkout Workflow',
+    description: 'Automated 4-step e-commerce flow: Search products, create a customer order, extract orderId, verify order status, and execute teardown order cancellation.',
+    steps: [
+      {
+        id: 'step-browse-products',
+        name: '1. Browse Electronics Catalog (GET)',
+        description: 'Fetch catalog of products in the electronics category',
+        enabled: true,
+        request: {
+          method: 'GET',
+          url: 'http://localhost:3001/api/mock/serve/api/products',
+          headers: [
+            { id: 'h-browse-1', key: 'Accept', value: 'application/json', enabled: true },
+          ],
+          queryParams: [
+            { id: 'qp-1', key: 'category', value: 'electronics', enabled: true },
+            { id: 'qp-2', key: 'limit', value: '10', enabled: true },
+          ],
+          body: '',
+          auth: { type: 'none' },
+        },
+        extractors: [
+          {
+            targetVariable: 'featuredProductId',
+            source: 'BODY_JSONPATH',
+            path: '$[0].id',
+            defaultValue: '201',
+            isSecret: false,
+          },
+        ],
+      },
+      {
+        id: 'step-create-order',
+        name: '2. Place Customer Order (POST)',
+        description: 'Create an order containing the selected product',
+        enabled: true,
+        dependsOn: ['step-browse-products'],
+        request: {
+          method: 'POST',
+          url: 'http://localhost:3001/api/mock/serve/api/orders',
+          headers: [
+            { id: 'h-order-1', key: 'Content-Type', value: 'application/json', enabled: true },
+          ],
+          queryParams: [],
+          body: JSON.stringify(
+            {
+              customerEmail: 'customer@example.com',
+              items: [{ productId: 201, quantity: 1 }],
+              shippingAddress: '123 Technology Park, Mumbai',
+            },
+            null,
+            2
+          ),
+          auth: { type: 'none' },
+        },
+        extractors: [
+          {
+            targetVariable: 'activeOrderId',
+            source: 'BODY_JSONPATH',
+            path: '$.orderId',
+            defaultValue: 'ORD-9021',
+            isSecret: false,
+          },
+          {
+            targetVariable: 'orderStatus',
+            source: 'BODY_JSONPATH',
+            path: '$.status',
+            defaultValue: 'confirmed',
+            isSecret: false,
+          },
+        ],
+      },
+      {
+        id: 'step-get-order',
+        name: '3. Track Order Details (GET)',
+        description: 'Fetch status of order {{activeOrderId}} extracted from Step 2',
+        enabled: true,
+        dependsOn: ['step-create-order'],
+        request: {
+          method: 'GET',
+          url: 'http://localhost:3001/api/mock/serve/api/orders/{{activeOrderId}}',
+          headers: [
+            { id: 'h-track-1', key: 'Accept', value: 'application/json', enabled: true },
+          ],
+          queryParams: [],
+          body: '',
+          auth: { type: 'none' },
+        },
+      },
+      {
+        id: 'step-cancel-order',
+        name: '4. Order Cancellation Teardown (DELETE)',
+        description: 'Guaranteed cleanup step cancelling the temporary demo order',
+        enabled: true,
+        isTeardown: true,
+        request: {
+          method: 'DELETE',
+          url: 'http://localhost:3001/api/mock/serve/api/orders/{{activeOrderId}}',
+          headers: [],
+          queryParams: [],
+          body: '',
+          auth: { type: 'none' },
+        },
+      },
+    ],
+  },
+  {
+    id: 'wf-user-order-flow',
+    name: 'Auth & User Lifecycle',
+    description: 'Authenticates a user, extracts the token, queries user details, and executes cleanup',
+    steps: [
+      {
+        id: 'step-auth',
+        name: 'User Authentication',
+        description: 'Exchange credentials for session token',
+        enabled: true,
+        request: {
+          method: 'POST',
+          url: 'http://localhost:3001/api/mock/serve/api/v1/auth/login',
+          headers: [{ id: 'h1', key: 'Content-Type', value: 'application/json', enabled: true }],
+          queryParams: [],
+          body: JSON.stringify({ username: 'developer', apiKey: '{{apiKey}}' }, null, 2),
+          auth: { type: 'none' },
+        },
+        extractors: [
+          {
+            targetVariable: 'sessionToken',
+            source: 'BODY_JSONPATH',
+            path: '$.token',
+            defaultValue: 'jwt_mock_token_secret_12345',
+            isSecret: true,
+          },
+          {
+            targetVariable: 'userId',
+            source: 'BODY_JSONPATH',
+            path: '$.userId',
+            defaultValue: '101',
+            isSecret: false,
+          },
+        ],
+      },
+      {
+        id: 'step-profile',
+        name: 'Fetch Profile',
+        description: 'Fetch profile using extracted session token',
+        enabled: true,
+        dependsOn: ['step-auth'],
+        request: {
+          method: 'GET',
+          url: 'http://localhost:3001/api/mock/serve/api/v1/users/{{userId}}',
+          headers: [{ id: 'h2', key: 'Authorization', value: 'Bearer {{sessionToken}}', enabled: true }],
+          queryParams: [],
+          body: '',
+          auth: { type: 'none' },
+        },
+      },
+      {
+        id: 'step-cleanup',
+        name: 'Logout & Session Cleanup',
+        description: 'Invalidate temporary session token upon scenario completion',
+        enabled: true,
+        isTeardown: true,
+        request: {
+          method: 'GET',
+          url: 'http://localhost:3001/api/mock/serve/health',
+          headers: [{ id: 'h3', key: 'Authorization', value: 'Bearer {{sessionToken}}', enabled: true }],
           queryParams: [],
           body: '',
           auth: { type: 'none' },
@@ -642,7 +751,7 @@ export const useAppStore = create<AppState>()(
 
       // Phase 9 Workflow Scenarios & Execution
       workflows: defaultWorkflows,
-      activeWorkflowId: 'wf-user-order-flow',
+      activeWorkflowId: 'wf-user-management-demo',
       setWorkflows: (workflows) => set({ workflows }),
       setActiveWorkflowId: (activeWorkflowId) =>
         set((state) => ({
@@ -806,7 +915,7 @@ export const useAppStore = create<AppState>()(
           environments: defaultEnvironments,
           activeEnvironmentId: 'env-local',
           workflows: defaultWorkflows,
-          activeWorkflowId: 'wf-user-order-flow',
+          activeWorkflowId: 'wf-user-management-demo',
           workflowExecutionResult: undefined,
           workflowExecutionRunning: false,
           workflowExecutionError: undefined,

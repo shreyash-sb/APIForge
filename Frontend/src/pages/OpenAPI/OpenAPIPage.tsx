@@ -8,8 +8,10 @@ import {
   Loader2,
   Send,
   ShieldCheck,
+  ShoppingBag,
   Sparkles,
   UploadCloud,
+  Users,
   XCircle,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -19,6 +21,7 @@ import { downloadJsonFile, exportSpecificationToOpenApi } from '@/lib/openApiExp
 import { openApiService } from '@/services/openapiService';
 import { useAppStore } from '@/store/useAppStore';
 import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
 import type {
   ApiEndpoint,
   ApiMediaContent,
@@ -220,6 +223,27 @@ export function OpenAPIPage() {
     }
   };
 
+  const loadEcommerceSpec = async () => {
+    setLoading(true);
+    setError(undefined);
+    setErrorDetails(undefined);
+    try {
+      const result = await openApiService.importSpecification('ecommerce-store-api.json', ECOMMERCE_SPEC_JSON);
+      if (result.success) {
+        setSpecification(result.specification);
+        setActiveSpecification(result.specification);
+        setSelectedEndpointId(result.specification.endpoints[0]?.id);
+      } else {
+        setError(result.error.message);
+        setErrorDetails(result.error.details);
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to import specification.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const openInBuilder = (endpoint: ApiEndpoint) => {
     const finalUrl = resolveEndpointUrl(specification?.servers[0]?.url, endpoint);
     const queryParams: QueryParam[] = endpoint.parameters
@@ -334,25 +358,39 @@ export function OpenAPIPage() {
           </p>
         </button>
 
-        {/* Live Demo Preset */}
+        {/* Live Demo Presets */}
         <div className="mt-5 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-sky-100 bg-sky-50/70 p-4">
           <div className="flex items-center gap-2.5 text-xs text-sky-900">
             <Sparkles className="h-4.5 w-4.5 text-sky-600 shrink-0" />
             <div>
-              <p className="font-bold">Live Demo Preset</p>
-              <p className="text-[11px] text-sky-700">Load official User Management API (OAS 3.1) with pre-configured mock endpoints</p>
+              <p className="font-bold">Live Demo Presets (2 Demo Projects)</p>
+              <p className="text-[11px] text-sky-700">Load either project with pre-configured mock endpoints and contract validation schemas</p>
             </div>
           </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={loadDemoSpec}
-            disabled={loading}
-            className="h-10 px-4 gap-2 border-sky-300 bg-white text-xs font-semibold text-sky-800 hover:bg-sky-100 shadow-xs rounded-xl"
-          >
-            <Sparkles className="h-4 w-4 text-sky-600" />
-            Load User Management Spec
-          </Button>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadDemoSpec}
+              disabled={loading}
+              className="h-10 px-4 gap-2 border-sky-300 bg-white text-xs font-semibold text-sky-800 hover:bg-sky-100 shadow-xs rounded-xl"
+              title="Load Project 1: User Management API (OAS 3.1)"
+            >
+              <Users className="h-4 w-4 text-sky-600" />
+              Load User Management Spec
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={loadEcommerceSpec}
+              disabled={loading}
+              className="h-10 px-4 gap-2 border-emerald-300 bg-white text-xs font-semibold text-emerald-800 hover:bg-emerald-100 shadow-xs rounded-xl"
+              title="Load Project 2: QuickCart E-Commerce API (OAS 3.1)"
+            >
+              <ShoppingBag className="h-4 w-4 text-emerald-600" />
+              Load QuickCart E-Commerce Spec
+            </Button>
+          </div>
         </div>
 
         {file && (

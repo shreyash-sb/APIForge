@@ -2,6 +2,23 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getSpecPath(): string {
+  const candidates = [
+    path.resolve(__dirname, '../../demo/project-1-user-management/user-management-api.json'),
+    path.resolve(process.cwd(), 'demo/project-1-user-management/user-management-api.json'),
+    path.resolve(process.cwd(), '../demo/project-1-user-management/user-management-api.json'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return candidates[0];
+}
+
 import { RequestExecutorService } from '../src/services/requestExecutor.service.js';
 import { WorkflowEngineService } from '../src/services/workflowEngine.service.js';
 import { OpenApiParserService } from '../src/services/openapiParser.service.js';
@@ -14,7 +31,7 @@ import type { TestCase } from '../src/types/testCase.types.js';
 import type { TestCaseExecutionResult } from '../src/types/testExecution.types.js';
 
 test('APIForge Nine Features — End-to-End Demo Integration Suite', async (t) => {
-  const specPath = path.resolve(process.cwd(), '../demo/user-management-api.json');
+  const specPath = getSpecPath();
   const specContent = fs.readFileSync(specPath, 'utf8');
 
   // ── 1. OpenAPI Import ──

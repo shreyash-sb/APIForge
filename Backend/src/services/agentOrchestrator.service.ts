@@ -2,9 +2,7 @@ import { EventEmitter } from 'node:events';
 import { AgentToolRegistryService } from './agentToolRegistry.service.js';
 import {
   AGENT_TOOL_POLICIES,
-  type AgentArtifact,
   type AgentStepProposal,
-  type AgentStepStatus,
   type AgentTask,
   type AgentTaskStatus,
   type AgentToolName,
@@ -58,7 +56,7 @@ export class AgentOrchestratorService extends EventEmitter {
 
     // Determine plan steps deterministically and enrich with AI insights
     const steps: AgentStepProposal[] = [];
-    let advisoryPlan = '';
+    let advisoryPlan: string;
 
     if (goalLower.includes('test') || goalLower.includes('regression') || goalLower.includes('validate')) {
       // Workflow A: Automatic API testing

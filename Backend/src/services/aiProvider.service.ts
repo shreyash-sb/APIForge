@@ -154,9 +154,10 @@ export class GoogleAiProvider implements AiProvider {
     // If Gemini is unavailable or failed after retry, fallback gracefully to deterministic diagnosis
     if (!response || !response.ok) {
       const fallback = await this.fallbackProvider.diagnose(evidence);
+      const reason = lastError ? ` (${lastError.message.slice(0, 100)})` : '';
       return {
         ...fallback,
-        summary: `[Advisory: Gemini Cloud High Demand / 503 - Fallback Mode] ${fallback.summary}`,
+        summary: `[Advisory: Gemini Cloud Fallback Mode${reason}] ${fallback.summary}`,
       };
     }
 

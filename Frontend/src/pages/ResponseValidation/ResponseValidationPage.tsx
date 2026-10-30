@@ -11,16 +11,23 @@ import {
   Radar,
   Search,
   ShieldCheck,
+  ShoppingBag,
+  Sparkles,
   TestTube2,
+  Users,
   XCircle,
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { openApiService } from '@/services/openapiService';
 import { testExecutionService } from '@/services/testExecutionService';
+import { testGeneratorService } from '@/services/testGeneratorService';
 import { validationService, ValidationApiError } from '@/services/validationService';
 import { useAppStore } from '@/store/useAppStore';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
 import type { HttpMethod } from '@/types/request.types';
 import type { TestCase, TestCaseType } from '@/types/testCase.types';
 import type { TestCaseExecutionResult } from '@/types/testExecution.types';
@@ -35,11 +42,37 @@ function resolveTestCaseUrl(rawUrl: string | undefined): string {
   if (!url) {
     return 'http://localhost:3001/api/mock/serve/api/users';
   }
-  if (!url.startsWith('http://') && !url.startsWith('https://')) {
-    url = `http://localhost:3001/api/mock/serve${url.startsWith('/') ? '' : '/'}${url}`;
+
+  // If relative path
+  if (url.startsWith('/')) {
+    url = `http://localhost:3001/api/mock/serve${url}`;
+  } else if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `http://localhost:3001/api/mock/serve/${url}`;
+  } else {
+    // If absolute URL pointing to localhost without :3001 or missing /api/mock/serve
+    try {
+      const parsed = new URL(url);
+      if (parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') {
+        let pathname = parsed.pathname;
+        if (!pathname.startsWith('/api/mock/serve')) {
+          pathname = `/api/mock/serve${pathname.startsWith('/') ? '' : '/'}${pathname}`;
+        }
+        url = `http://localhost:3001${pathname}${parsed.search}`;
+      }
+    } catch {
+      // keep url as is
+    }
   }
-  // Replace any {id} or {param}
-  url = url.replace(/\{[a-zA-Z0-9_-]+\}/g, '101');
+
+  // Contextual parameter replacements for demo projects
+  if (url.includes('/api/products/')) {
+    url = url.replace(/\{[a-zA-Z0-9_-]+\}/g, '201');
+  } else if (url.includes('/api/orders/')) {
+    url = url.replace(/\{[a-zA-Z0-9_-]+\}/g, 'ORD-9021');
+  } else {
+    url = url.replace(/\{[a-zA-Z0-9_-]+\}/g, '101');
+  }
+
   return url;
 }
 
@@ -113,7 +146,9 @@ type FilterStatus = 'ALL' | 'VALIDATION_PASSED' | 'VALIDATION_FAILED' | 'NOT_VAL
 export function ResponseValidationPage() {
   const navigate = useNavigate();
   const specification = useAppStore((state) => state.activeSpecification);
+  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
   const generatedTests = useAppStore((state) => state.generatedTests);
+  const setGeneratedTests = useAppStore((state) => state.setGeneratedTests);
   const executionResults = useAppStore((state) => state.executionResults);
   const updateExecutionResult = useAppStore((state) => state.updateExecutionResult);
   const validationResults = useAppStore((state) => state.validationResults);
@@ -122,6 +157,74 @@ export function ResponseValidationPage() {
   const validationSummary = useAppStore((state) => state.validationSuiteSummary);
   const setValidationSummary = useAppStore((state) => state.setValidationSuiteSummary);
   const setRequestDraft = useAppStore((state) => state.setRequestDraft);
+
+  const [loadingDemo, setLoadingDemo] = useState(false);
+
+  const handleLoadDemoSuite = async (projectName: 'user' | 'ecommerce') => {
+    setLoadingDemo(true);
+    setApiError(null);
+    try {
+      const fileName = projectName === 'user' ? 'user-management-api.json' : 'ecommerce-store-api.json';
+      const specJson = projectName === 'user' ? USER_MANAGEMENT_SPEC_JSON : ECOMMERCE_SPEC_JSON;
+
+      const imported = await openApiService.importSpecification(fileName, specJson);
+      if (!imported.success) {
+        setApiError(imported.error.message);
+        return;
+      }
+
+      const spec = imported.specification;
+      setActiveSpecification(spec);
+
+      // Generate test suite for all operations
+      const suite = await testGeneratorService.generate({
+        specification: spec,
+        settings: {
+          categories: ['POSITIVE', 'NEGATIVE', 'BOUNDARY', 'SCHEMA'],
+          maxTestsPerEndpoint: 5,
+        },
+      });
+
+      const tests: TestCase[] = suite.tests;
+      setGeneratedTests(tests);
+      setSelectedTestCaseId(tests[0]?.id);
+
+      // Execute tests against mock server
+      const batchToRun: TestCase[] = tests.map((t: TestCase) => ({
+        ...t,
+        request: {
+          ...t.request,
+          url: resolveTestCaseUrl(t.request.url),
+        },
+      }));
+      const execSuite = await testExecutionService.executeBatch(batchToRun);
+      const execMap: Record<string, TestCaseExecutionResult> = {};
+      for (const res of execSuite.results) {
+        execMap[res.testCaseId] = res;
+        updateExecutionResult(res.testCaseId, res);
+      }
+
+      // Validate returned responses against OpenAPI schemas
+      const executableItems = tests
+        .map((t: TestCase) => ({
+          testCase: t,
+          executionResult: execMap[t.id]!,
+        }))
+        .filter((item: { testCase: TestCase; executionResult?: TestCaseExecutionResult }) => Boolean(item.executionResult));
+
+      const batchVal = await validationService.validateBatch(executableItems, spec.schemas);
+      const valMap: Record<string, TestCaseValidationResult> = {};
+      for (const res of batchVal.results) {
+        valMap[res.testCaseId] = res;
+      }
+      setValidationResults(valMap);
+      setValidationSummary(batchVal.summary);
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : 'Failed to load and validate demo suite.');
+    } finally {
+      setLoadingDemo(false);
+    }
+  };
 
   const [selectedTestCaseId, setSelectedTestCaseId] = useState<string | undefined>(
     () => generatedTests[0]?.id
@@ -335,18 +438,38 @@ export function ResponseValidationPage() {
   if (!specification) {
     return (
       <div className="space-y-6">
-        <div className="panel-surface mx-auto max-w-2xl p-8 text-center">
+        <div className="panel-surface mx-auto max-w-2xl p-8 text-center space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
             <FileCode2 className="h-7 w-7" />
           </div>
-          <h2 className="mt-4 text-xl font-semibold text-slate-950">Import an OpenAPI Specification</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">Import an OpenAPI Specification</h2>
+          <p className="text-sm leading-6 text-slate-500">
             APIForge validates API response bodies and headers against your normalized OpenAPI contract schemas and
-            test expectations. Import a specification to begin.
+            test expectations. Import a specification to begin or load a ready-to-test demo suite.
           </p>
-          <Link to="/openapi">
-            <Button className="mt-5">Import OpenAPI Specification</Button>
-          </Link>
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
+            <Link to="/openapi">
+              <Button variant="outline" className="h-10 px-4 text-xs font-semibold rounded-xl">
+                Import OpenAPI Specification
+              </Button>
+            </Link>
+            <Button
+              onClick={() => handleLoadDemoSuite('user')}
+              disabled={loadingDemo}
+              className="h-10 px-4 text-xs font-semibold rounded-xl gap-2 bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
+            >
+              {loadingDemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+              Load User Management Suite
+            </Button>
+            <Button
+              onClick={() => handleLoadDemoSuite('ecommerce')}
+              disabled={loadingDemo}
+              className="h-10 px-4 text-xs font-semibold rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+            >
+              {loadingDemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
+              Load QuickCart Store Suite
+            </Button>
+          </div>
         </div>
       </div>
     );
@@ -356,22 +479,38 @@ export function ResponseValidationPage() {
   if (!generatedTests.length) {
     return (
       <div className="space-y-6">
-        <div className="panel-surface mx-auto max-w-2xl p-8 text-center">
+        <div className="panel-surface mx-auto max-w-2xl p-8 text-center space-y-4">
           <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-violet-50 text-violet-600">
             <TestTube2 className="h-7 w-7" />
           </div>
-          <h2 className="mt-4 text-xl font-semibold text-slate-950">No Generated Tests Available</h2>
-          <p className="mt-2 text-sm leading-6 text-slate-500">
+          <h2 className="mt-2 text-xl font-semibold text-slate-950">No Generated Tests Available</h2>
+          <p className="text-sm leading-6 text-slate-500">
             The active specification <strong className="font-semibold text-slate-800">{specification.metadata.title}</strong> has
-            not generated test cases yet. Visit the Test Generator to generate and execute tests.
+            not generated test cases yet. Visit the Test Generator or load a demo test suite below.
           </p>
-          <div className="mt-6 flex justify-center gap-3">
+          <div className="flex flex-wrap items-center justify-center gap-3 pt-3">
             <Link to="/test-generator">
-              <Button>
+              <Button variant="outline" className="h-10 px-4 text-xs font-semibold rounded-xl gap-2">
                 <TestTube2 className="h-4 w-4" />
                 Go to Test Generator
               </Button>
             </Link>
+            <Button
+              onClick={() => handleLoadDemoSuite('user')}
+              disabled={loadingDemo}
+              className="h-10 px-4 text-xs font-semibold rounded-xl gap-2 bg-sky-600 hover:bg-sky-700 text-white shadow-xs"
+            >
+              {loadingDemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <Users className="h-4 w-4" />}
+              Load User Management Suite
+            </Button>
+            <Button
+              onClick={() => handleLoadDemoSuite('ecommerce')}
+              disabled={loadingDemo}
+              className="h-10 px-4 text-xs font-semibold rounded-xl gap-2 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs"
+            >
+              {loadingDemo ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShoppingBag className="h-4 w-4" />}
+              Load QuickCart Store Suite
+            </Button>
           </div>
         </div>
       </div>
@@ -400,7 +539,29 @@ export function ResponseValidationPage() {
               ) : null}
             </p>
           </div>
-          <div className="flex flex-wrap items-center gap-3">
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleLoadDemoSuite('user')}
+              disabled={loadingDemo}
+              className="h-10 px-3.5 text-xs font-semibold rounded-xl gap-1.5 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100"
+              title="Load User Management Suite (Aarav Patil)"
+            >
+              {loadingDemo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Users className="h-3.5 w-3.5 text-sky-600" />}
+              User Suite
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleLoadDemoSuite('ecommerce')}
+              disabled={loadingDemo}
+              className="h-10 px-3.5 text-xs font-semibold rounded-xl gap-1.5 border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
+              title="Load QuickCart Store Suite"
+            >
+              {loadingDemo ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />}
+              QuickCart Suite
+            </Button>
             <Link to="/test-generator">
               <Button variant="outline" size="sm" className="h-10 px-4 text-xs font-semibold rounded-xl gap-2 border-slate-200">
                 <ExternalLink className="h-4 w-4 text-slate-500" />
@@ -412,6 +573,7 @@ export function ResponseValidationPage() {
               className="h-10 px-5 text-xs font-semibold rounded-xl gap-2 bg-blue-600 hover:bg-blue-700 text-white shadow-xs"
               onClick={handleValidateBatch}
               disabled={validatingBatch || generatedTests.length === 0}
+              aria-label="Validate all executed tests"
             >
               {validatingBatch ? (
                 <>
@@ -421,7 +583,7 @@ export function ResponseValidationPage() {
               ) : (
                 <>
                   <ShieldCheck className="h-4 w-4" />
-                  Validate All Tests ({generatedTests.length})
+                  Validate All Executed Tests ({generatedTests.length})
                 </>
               )}
             </Button>

@@ -1,4 +1,4 @@
-import { Download, FileBarChart, Loader2, RefreshCw } from 'lucide-react';
+import { Download, FileBarChart, Loader2, RefreshCw, ShoppingBag, Users, Zap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { EmptyState } from '@/components/common/EmptyState';
 import { EndpointReportTable } from '@/components/reports/EndpointReportTable';
@@ -8,6 +8,7 @@ import { ReportSummaryCards } from '@/components/reports/ReportSummaryCards';
 import { Button } from '@/components/ui/button';
 import { reportService, ReportApiError } from '@/services/reportService';
 import { useAppStore } from '@/store/useAppStore';
+import { loadDemoProject } from '@/services/demoProjectService';
 import { useState } from 'react';
 
 export function ReportsPage() {
@@ -26,25 +27,49 @@ export function ReportsPage() {
 
   if (!activeSpecification) {
     return (
-      <EmptyState
-        icon={FileBarChart}
-        title="Import an OpenAPI specification"
-        description="Reports aggregate the current test run. Import a specification before generating analytics."
-        actionLabel="Import OpenAPI"
-        actionPath="/openapi"
-      />
+      <div className="space-y-4">
+        <EmptyState
+          icon={FileBarChart}
+          title="Import an OpenAPI specification"
+          description="Reports aggregate the current test run. Import a specification before generating analytics."
+          actionLabel="Import OpenAPI"
+          actionPath="/openapi"
+        />
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button onClick={() => void loadDemoProject('user')} className="bg-sky-600 hover:bg-sky-700 text-white gap-1.5 text-xs h-9">
+            <Users className="h-4 w-4" />
+            + Load User Demo Suite
+          </Button>
+          <Button onClick={() => void loadDemoProject('ecommerce')} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9">
+            <ShoppingBag className="h-4 w-4" />
+            + Load QuickCart Demo Suite
+          </Button>
+        </div>
+      </div>
     );
   }
 
   if (!generatedTests.length) {
     return (
-      <EmptyState
-        icon={FileBarChart}
-        title="No generated tests available"
-        description="Generate test cases from your active specification to prepare a current-run report."
-        actionLabel="Open Test Generator"
-        actionPath="/test-generator"
-      />
+      <div className="space-y-4">
+        <EmptyState
+          icon={FileBarChart}
+          title="No generated tests available"
+          description="Generate test cases from your active specification to prepare a current-run report."
+          actionLabel="Open Test Generator"
+          actionPath="/test-generator"
+        />
+        <div className="flex flex-wrap items-center justify-center gap-3">
+          <Button onClick={() => void loadDemoProject('user')} className="bg-sky-600 hover:bg-sky-700 text-white gap-1.5 text-xs h-9">
+            <Users className="h-4 w-4" />
+            + Synthesize User Tests
+          </Button>
+          <Button onClick={() => void loadDemoProject('ecommerce')} className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5 text-xs h-9">
+            <ShoppingBag className="h-4 w-4" />
+            + Synthesize QuickCart Tests
+          </Button>
+        </div>
+      </div>
     );
   }
 

@@ -1,10 +1,13 @@
-import { BookMarked, Copy, Download, Search, Check } from 'lucide-react';
+import { BookMarked, Copy, Download, Search, Check, ShoppingBag, Users } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/store/useAppStore';
 import { specificationMarkdown } from '@/lib/documentationData';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
+import { openApiService } from '@/services/openapiService';
 import type { ApiMediaContent, ApiSchema, JsonValue } from '@/types/openapi.types';
 
 const methodBadges: Record<string, string> = {
@@ -50,9 +53,6 @@ function exampleFor(content: ApiMediaContent) {
   );
 }
 
-import { openApiService } from '@/services/openapiService';
-import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
-
 export function DocumentationPage() {
   const specification = useAppStore((state) => state.activeSpecification);
   const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
@@ -87,9 +87,25 @@ export function DocumentationPage() {
                 setActiveSpecification(res.specification);
               }
             }}
-            className="bg-primary hover:bg-primary/90"
+            className="bg-sky-600 hover:bg-sky-700 text-white gap-1.5"
           >
-            Load User Management Demo Spec
+            <Users className="h-4 w-4" />
+            + User API Spec
+          </Button>
+          <Button
+            onClick={async () => {
+              const res = await openApiService.importSpecification(
+                'ecommerce-store-api.json',
+                ECOMMERCE_SPEC_JSON
+              );
+              if (res.success && res.specification) {
+                setActiveSpecification(res.specification);
+              }
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            + QuickCart Spec
           </Button>
         </div>
       </div>

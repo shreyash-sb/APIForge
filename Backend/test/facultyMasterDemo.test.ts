@@ -2,6 +2,22 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+function getSpecPath(): string {
+  const candidates = [
+    path.resolve(__dirname, '../../demo/project-1-user-management/user-management-api.json'),
+    path.resolve(process.cwd(), 'demo/project-1-user-management/user-management-api.json'),
+    path.resolve(process.cwd(), '../demo/project-1-user-management/user-management-api.json'),
+  ];
+  for (const c of candidates) {
+    if (fs.existsSync(c)) return c;
+  }
+  return candidates[0];
+}
 
 import { OpenApiParserService } from '../src/services/openapiParser.service.js';
 import { MockServerService } from '../src/services/mockServer.service.js';
@@ -51,7 +67,7 @@ test('FACULTY DEMO MASTER TEST CASE: Complete 9-Feature End-to-End User Manageme
 
   // STEP 1: Feature C — OpenAPI Specification Import
   await t.test('1. Feature C: OpenAPI Import — Parse User Management Specification', async () => {
-    const specPath = path.resolve(process.cwd(), '../demo/user-management-api.json');
+    const specPath = getSpecPath();
     const content = fs.readFileSync(specPath, 'utf8');
     const parser = new OpenApiParserService();
     const result = await parser.importSpecification(content);

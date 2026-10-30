@@ -49,7 +49,7 @@ export class ConversationMemoryManager {
     }
 
     // Condense older messages into a summary prompt
-    let summaryContent = '';
+    let summaryContent: string;
     if (summarizerFn) {
       summaryContent = await summarizerFn(olderMessages);
     } else {

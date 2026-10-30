@@ -12,9 +12,11 @@ import {
   Plus,
   RefreshCw,
   Search,
+  ShoppingBag,
   Sliders,
   Sparkles,
   Trash2,
+  Users,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -22,6 +24,7 @@ import { Input } from '@/components/ui/input';
 import { downloadJsonFile, exportMockRoutesToOpenApi } from '@/lib/openApiExporter';
 import { mockServerService } from '@/services/mockServerService';
 import { useAppStore } from '@/store/useAppStore';
+import { loadDemoProject } from '@/services/demoProjectService';
 import type { HttpMethod } from '@/types/request.types';
 import type { MockRequestLog, MockRoute } from '@/types/mockServer.types';
 
@@ -316,6 +319,50 @@ export function MockServerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setActionLoading(true);
+                try {
+                  const spec = await loadDemoProject('user');
+                  const res = await mockServerService.generateFromSpec(spec, { defaultDelayMs: 15, overwriteExisting: false });
+                  setSuccessMsg(`Mounted ${res.generatedCount} User Management mock routes.`);
+                  await loadRoutesAndLogs();
+                } finally {
+                  setActionLoading(false);
+                  setTimeout(() => setSuccessMsg(null), 4000);
+                }
+              }}
+              disabled={actionLoading}
+              className="gap-1.5 bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 text-xs h-8"
+              title="1-Click mount User Management mock routes"
+            >
+              <Users className="h-3.5 w-3.5 text-sky-600" />
+              + User Routes
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={async () => {
+                setActionLoading(true);
+                try {
+                  const spec = await loadDemoProject('ecommerce');
+                  const res = await mockServerService.generateFromSpec(spec, { defaultDelayMs: 15, overwriteExisting: false });
+                  setSuccessMsg(`Mounted ${res.generatedCount} QuickCart E-Commerce mock routes.`);
+                  await loadRoutesAndLogs();
+                } finally {
+                  setActionLoading(false);
+                  setTimeout(() => setSuccessMsg(null), 4000);
+                }
+              }}
+              disabled={actionLoading}
+              className="gap-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-xs h-8"
+              title="1-Click mount QuickCart E-Commerce mock routes"
+            >
+              <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
+              + QuickCart Routes
+            </Button>
             <Button variant="outline" size="sm" onClick={loadRoutesAndLogs} disabled={loading} className="gap-1.5 text-xs h-8">
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               Refresh
