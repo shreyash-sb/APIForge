@@ -29,7 +29,7 @@ export const reportService = {
       tests: tests.map(({ id, name, type, priority, enabled, endpoint }) => ({ id, name, type, priority, enabled, endpoint })),
       executionResults: executionResults.map((item) => ({ testCaseId: item.testCaseId, executionId: item.executionId, status: item.status, durationMs: item.durationMs, httpStatus: item.response?.status, errorMessage: item.error?.message })),
       validationResults: validationResults.map((item) => ({ testCaseId: item.testCaseId, executionId: item.executionId, status: item.status, durationMs: item.durationMs, assertions: item.assertions.map(({ category, path, expected, actual, passed, message }) => ({ category, path, expected, actual, passed, message })) })),
-      diagnosisResults: diagnosisResults.map((item) => ({ diagnosisId: item.diagnosisId, testCaseId: item.testCaseId, executionId: item.executionId, durationMs: item.durationMs, confidence: item.confidence, summary: item.summary, findings: item.findings.map(({ severity }) => ({ severity })) })),
+      diagnosisResults: diagnosisResults.map((item) => ({ diagnosisId: item.diagnosisId, testCaseId: item.testCaseId, executionId: item.executionId, durationMs: item.durationMs, confidence: item.confidence, summary: item.summary, findings: item.findings.map(({ severity }) => ({ severity })), provider: item.provider, providerStatus: item.providerStatus })),
     };
   },
   async generateReport(payload: GenerateReportRequest): Promise<ReportSummary> {
@@ -42,7 +42,7 @@ export const reportService = {
     download('apiforge-endpoints.csv', 'text/csv;charset=utf-8', rows.map((row) => row.map(csv).join(',')).join('\n'));
   },
   downloadFailureCsv(failures: FailureBreakdownItem[]) {
-    const rows = [['Test', 'Method', 'Endpoint', 'Execution Status', 'Validation Status', 'Failed Assertions', 'Categories', 'Paths', 'AI Severity', 'AI Confidence', 'Message'], ...failures.map((item) => [item.testName, item.method, item.path, item.executionStatus, item.validationStatus, item.failedAssertionCount, item.failedAssertionCategories.join('; '), item.failedAssertionPaths.join('; '), item.aiSeverity, item.aiConfidence, item.message])];
+    const rows = [['Test', 'Method', 'Endpoint', 'Execution Status', 'Validation Status', 'Failed Assertions', 'Categories', 'Paths', 'AI Severity', 'AI Confidence', 'AI Source', 'AI Summary', 'Message'], ...failures.map((item) => [item.testName, item.method, item.path, item.executionStatus, item.validationStatus, item.failedAssertionCount, item.failedAssertionCategories.join('; '), item.failedAssertionPaths.join('; '), item.aiSeverity, item.aiConfidence, item.aiProviderStatus ?? (item.diagnosisId ? item.aiProvider : 'Not diagnosed'), item.aiDiagnosisSummary, item.message])];
     download('apiforge-failures.csv', 'text/csv;charset=utf-8', rows.map((row) => row.map(csv).join(',')).join('\n'));
   },
 };

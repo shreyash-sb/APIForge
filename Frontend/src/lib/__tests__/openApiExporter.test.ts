@@ -31,6 +31,7 @@ describe('OpenAPI 3.1 Reverse Exporter', () => {
     const doc = exportMockRoutesToOpenApi(routes, { title: 'Product Service API' });
     expect(doc.openapi).toBe('3.1.0');
     expect((doc.info as { title: string }).title).toBe('Product Service API');
+    expect((doc.servers as Array<{ url: string }>)[0].url).toBe('http://localhost:3001/api/mock/serve');
     const paths = doc.paths as Record<string, Record<string, any>>;
     expect(paths['/products']).toBeDefined();
     expect(paths['/products'].get).toBeDefined();

@@ -14,34 +14,20 @@ import type { TestCase } from '../types/testCase.types.js';
 import type { TestCaseExecutionResult } from '../types/testExecution.types.js';
 import type { TestCaseValidationResult } from '../types/validation.types.js';
 import type {
+  DiagnoseBatchFailure,
   DiagnoseBatchItem,
   DiagnoseBatchResult,
   DiagnosisResult,
   SanitizedEvidence,
 } from '../types/diagnosis.types.js';
 import { MAX_BODY_EXCERPT_BYTES, MAX_DIAGNOSIS_BATCH_SIZE } from '../types/diagnosis.types.js';
-import type { AiProvider } from './aiProvider.service.js';
-import { createAiProvider } from './aiProvider.service.js';
-
-// Patterns for values that must never leave the backend
-const SECRET_PATTERNS = [
-  /bearer\s+\S+/gi,
-  // JSON commonly wraps property names and values in quotes; the old patterns
-  // only matched `token: value`, allowing `{ "token": "value" }` through.
-  /(["']?(?:access[_-]?token|refresh[_-]?token|auth(?:orization)?|api[-_]?key|password|secret|token)["']?\s*[:=]\s*)(?:"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[^\s,}\]]+)/gi,
-];
-
-function redactSecrets(value: string): string {
-  let out = value;
-  for (const pattern of SECRET_PATTERNS) {
-    out = out.replace(pattern, '[REDACTED]');
-  }
-  return out;
-}
+import { MockAiProvider, type AiProvider } from './aiProvider.service.js';
+import { isSensitiveKey, redactDeep, redactSecrets } from '../utils/secretRedaction.js';
 
 function sanitizeBodyExcerpt(body: unknown): string | null {
   if (body === null || body === undefined) return null;
-  const raw = typeof body === 'string' ? body : JSON.stringify(body);
+  // Redact before truncating so a cut can never split a secret past the patterns.
+  const raw = redactSecrets(typeof body === 'string' ? body : JSON.stringify(redactDeep(body)) ?? '');
   const truncated = raw.length > MAX_BODY_EXCERPT_BYTES ? raw.slice(0, MAX_BODY_EXCERPT_BYTES) + '…' : raw;
   return redactSecrets(truncated);
 }
@@ -58,7 +44,7 @@ function sanitizeHeaders(raw: Record<string, string> | undefined): Record<string
   ]);
   const out: Record<string, string> = {};
   for (const [k, v] of Object.entries(raw)) {
-    out[k] = REDACTED_HEADER_KEYS.has(k.toLowerCase()) ? '[REDACTED]' : v;
+    out[k] = REDACTED_HEADER_KEYS.has(k.toLowerCase()) || isSensitiveKey(k) ? '[REDACTED]' : redactSecrets(String(v));
   }
   return out;
 }
@@ -75,18 +61,18 @@ function buildEvidence(
   return {
     testCase: {
       id: testCase.id,
-      name: testCase.name,
-      description: testCase.description,
+      name: redactSecrets(String(testCase.name ?? '')),
+      description: redactSecrets(String(testCase.description ?? '')),
       type: testCase.type,
       priority: testCase.priority,
       endpoint: {
         method: testCase.endpoint.method,
-        path: testCase.endpoint.path,
+        path: redactSecrets(testCase.endpoint.path),
       },
       expected: {
         statusCodes: testCase.expected.statusCodes,
         statusClass: testCase.expected.statusClass,
-        conditions: testCase.expected.conditions,
+        conditions: testCase.expected.conditions?.map((condition) => redactSecrets(String(condition))),
       },
     },
     execution: {
@@ -117,9 +103,9 @@ function buildEvidence(
         .map((a) => ({
           category: a.category,
           path: a.path,
-          expected: redactSecrets(a.expected),
-          actual: redactSecrets(a.actual),
-          message: redactSecrets(a.message),
+          expected: redactSecrets(String(a.expected ?? '')),
+          actual: redactSecrets(String(a.actual ?? '')),
+          message: redactSecrets(String(a.message ?? '')),
         })),
     },
   };
@@ -130,21 +116,37 @@ function buildEvidence(
 // ---------------------------------------------------------------------------
 
 export class DiagnosisService {
-  private readonly provider: AiProvider;
+  /**
+   * A provider injected at construction (tests, CLI) is always used.
+   * Without one, callers pass a request-scoped provider resolved from the
+   * authenticated user's session; the fallback is the mock/demo provider.
+   */
+  private readonly fixedProvider?: AiProvider;
 
   constructor(provider?: AiProvider) {
-    this.provider = provider ?? createAiProvider();
+    this.fixedProvider = provider;
+  }
+
+  get usesFixedProvider(): boolean {
+    return Boolean(this.fixedProvider);
+  }
+
+  private pickProvider(requestProvider?: AiProvider): AiProvider {
+    return this.fixedProvider ?? requestProvider ?? new MockAiProvider();
   }
 
   async diagnoseSingle(
     testCase: TestCase,
     executionResult: TestCaseExecutionResult,
-    validationResult: TestCaseValidationResult
+    validationResult: TestCaseValidationResult,
+    requestProvider?: AiProvider
   ): Promise<DiagnosisResult> {
+    const provider = this.pickProvider(requestProvider);
     const startedAt = Date.now();
     const evidence = buildEvidence(testCase, executionResult, validationResult);
 
-    const aiResponse = await this.provider.diagnose(evidence);
+    const aiResponse = await provider.diagnose(evidence);
+    const providerStatus = aiResponse.providerStatus ?? (provider.name === 'mock' ? 'mock' : 'live');
 
     const durationMs = Date.now() - startedAt;
 
@@ -154,7 +156,10 @@ export class DiagnosisService {
       executionId: executionResult.executionId,
       diagnosedAt: new Date().toISOString(),
       durationMs,
-      provider: this.provider.name,
+      // Fallback content was produced deterministically, so it is never labelled as Gemini.
+      provider: providerStatus === 'live' ? provider.name : 'mock',
+      providerStatus,
+      fallbackReason: aiResponse.fallbackReason,
       validationStatus: validationResult.status,
       confidence: aiResponse.confidence,
       summary: aiResponse.summary,
@@ -163,24 +168,29 @@ export class DiagnosisService {
     };
   }
 
-  async diagnoseBatch(items: DiagnoseBatchItem[]): Promise<DiagnoseBatchResult> {
+  async diagnoseBatch(items: DiagnoseBatchItem[], requestProvider?: AiProvider): Promise<DiagnoseBatchResult> {
     if (items.length > MAX_DIAGNOSIS_BATCH_SIZE) {
       throw new Error(
         `Batch limit exceeded: maximum allowed is ${MAX_DIAGNOSIS_BATCH_SIZE} items, received ${items.length}.`
       );
     }
 
+    const provider = this.pickProvider(requestProvider);
     const startedAt = Date.now();
     const results: DiagnosisResult[] = [];
+    const failures: DiagnoseBatchFailure[] = [];
 
     for (const item of items) {
-      // Sequential to respect rate limits
-      const result = await this.diagnoseSingle(
-        item.testCase,
-        item.executionResult,
-        item.validationResult
-      );
-      results.push(result);
+      // Sequential to respect rate limits; one failing item never discards the others.
+      try {
+        results.push(await this.diagnoseSingle(item.testCase, item.executionResult, item.validationResult, provider));
+      } catch {
+        failures.push({
+          testCaseId: item.testCase.id,
+          executionId: item.executionResult.executionId,
+          message: 'This case could not be diagnosed. Retry later.',
+        });
+      }
     }
 
     return {
@@ -188,6 +198,7 @@ export class DiagnosisService {
       diagnosedAt: new Date().toISOString(),
       totalDurationMs: Date.now() - startedAt,
       results,
+      ...(failures.length ? { failures } : {}),
     };
   }
 }

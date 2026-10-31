@@ -517,7 +517,7 @@ export function ResponseValidationPage() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold border ${methodClass}`}>
+                            <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold border ${methodClass}`}>
                               {testCase.endpoint.method}
                             </span>
                             <span className="font-mono text-[11px] text-slate-600 truncate max-w-[200px]" title={testCase.endpoint.path}>
@@ -537,7 +537,7 @@ export function ResponseValidationPage() {
                         <Button
                           size="sm"
                           variant="ghost"
-                          className="h-7 px-2 text-[11px] text-slate-600 hover:text-blue-700 hover:bg-blue-50"
+                          className="px-2 text-[11px] text-slate-600 hover:text-blue-700 hover:bg-blue-50"
                           disabled={isValidatingThis || validatingBatch || !executionResult}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -557,25 +557,25 @@ export function ResponseValidationPage() {
                       <div className="mt-2 flex items-center justify-between text-[11px]">
                         <div className="flex items-center gap-2">
                           <span
-                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold border ${badgeInfo.className}`}
+                            className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold border ${badgeInfo.className}`}
                           >
                             <BadgeIcon className="h-3 w-3" />
                             {badgeInfo.label}
                           </span>
 
                           {validationResult && (
-                            <span className="text-[10px] text-slate-500">
+                            <span className="text-[11px] text-slate-500">
                               {validationResult.summary.passedAssertions}/{validationResult.summary.totalAssertions} passed
                             </span>
                           )}
                         </div>
 
                         {executionResult ? (
-                          <span className="text-[10px] text-slate-400">
+                          <span className="text-[11px] text-slate-400">
                             HTTP {executionResult.response?.status ?? 'FAIL'} ({executionResult.durationMs}ms)
                           </span>
                         ) : (
-                          <span className="text-[10px] text-amber-600 font-medium">Not run</span>
+                          <span className="text-[11px] text-amber-600 font-medium">Not run</span>
                         )}
                       </div>
                     </div>
@@ -600,7 +600,7 @@ export function ResponseValidationPage() {
                     <span className="font-mono text-sm text-slate-800 break-all">
                       {currentPair.testCase.endpoint.path}
                     </span>
-                    <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border ${typeStyle[currentPair.testCase.type]}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold border ${typeStyle[currentPair.testCase.type]}`}>
                       {currentPair.testCase.type}
                     </span>
                   </div>
@@ -770,7 +770,7 @@ export function ResponseValidationPage() {
                                 <XCircle className="h-4 w-4 text-rose-600 shrink-0" />
                               )}
                               <span
-                                className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${categoryInfo.className}`}
+                                className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${categoryInfo.className}`}
                               >
                                 {categoryInfo.label}
                               </span>
@@ -780,7 +780,7 @@ export function ResponseValidationPage() {
                             </div>
 
                             <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                              className={`rounded-full px-2 py-0.5 text-[11px] font-bold ${
                                 assertion.passed
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-rose-100 text-rose-800'
@@ -798,7 +798,7 @@ export function ResponseValidationPage() {
                           {/* Expected vs Actual Comparison Grid */}
                           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
                             <div className="rounded-lg bg-slate-50 border border-slate-200/80 p-2.5">
-                              <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">
+                              <span className="text-[11px] font-semibold text-slate-400 block mb-1">
                                 Expected Contract
                               </span>
                               <div className="font-mono text-xs text-slate-800 break-all whitespace-pre-wrap">
@@ -814,7 +814,7 @@ export function ResponseValidationPage() {
                               }`}
                             >
                               <span
-                                className={`text-[10px] font-semibold uppercase tracking-wider block mb-1 ${
+                                className={`text-[11px] font-semibold uppercase tracking-wider block mb-1 ${
                                   assertion.passed ? 'text-slate-400' : 'text-rose-500'
                                 }`}
                               >
@@ -842,27 +842,27 @@ export function ResponseValidationPage() {
                   {currentPair.executionResult?.response ? (
                     <>
                       <div>
-                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        <h4 className="text-xs font-semibold text-slate-700 mb-1.5">
                           Status & Metadata
                         </h4>
                         <div className="rounded-lg bg-slate-50 p-3 font-mono text-xs text-slate-800 grid grid-cols-2 sm:grid-cols-3 gap-2">
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Status:</span>
+                            <span className="text-slate-400 block text-[11px]">Status:</span>
                             <span className="font-bold">{currentPair.executionResult.response.status} {currentPair.executionResult.response.statusText}</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Response Time:</span>
+                            <span className="text-slate-400 block text-[11px]">Response Time:</span>
                             <span>{currentPair.executionResult.response.responseTime} ms</span>
                           </div>
                           <div>
-                            <span className="text-slate-400 block text-[10px]">Payload Size:</span>
+                            <span className="text-slate-400 block text-[11px]">Payload Size:</span>
                             <span>{currentPair.executionResult.response.size} bytes</span>
                           </div>
                         </div>
                       </div>
 
                       <div>
-                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        <h4 className="text-xs font-semibold text-slate-700 mb-1.5">
                           Response Headers
                         </h4>
                         <pre className="rounded-lg bg-slate-900 text-slate-200 p-3 text-xs font-mono overflow-x-auto max-h-48">
@@ -871,7 +871,7 @@ export function ResponseValidationPage() {
                       </div>
 
                       <div>
-                        <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                        <h4 className="text-xs font-semibold text-slate-700 mb-1.5">
                           Response Body
                         </h4>
                         <pre className="rounded-lg bg-slate-900 text-emerald-400 p-3 text-xs font-mono overflow-x-auto max-h-64">
@@ -893,7 +893,7 @@ export function ResponseValidationPage() {
               {activeTab === 'expectations' && (
                 <div className="mt-4 space-y-4">
                   <div>
-                    <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                    <h4 className="text-xs font-semibold text-slate-700 mb-1.5">
                       Expected Status Codes
                     </h4>
                     <div className="rounded-lg bg-slate-50 p-3 font-mono text-xs text-slate-800">
@@ -905,7 +905,7 @@ export function ResponseValidationPage() {
 
                   {currentPair.testCase.expected.headers && (
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      <h4 className="text-xs font-semibold text-slate-700 mb-1.5">
                         Expected Headers Contract
                       </h4>
                       <pre className="rounded-lg bg-slate-900 text-slate-200 p-3 text-xs font-mono overflow-x-auto max-h-48">
@@ -916,7 +916,7 @@ export function ResponseValidationPage() {
 
                   {currentPair.testCase.expected.responseSchema && (
                     <div>
-                      <h4 className="text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                      <h4 className="text-xs font-semibold text-slate-700 mb-1.5">
                         Expected Response Schema (OpenAPI Definition)
                       </h4>
                       <pre className="rounded-lg bg-slate-900 text-blue-400 p-3 text-xs font-mono overflow-x-auto max-h-64">

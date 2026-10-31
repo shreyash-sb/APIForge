@@ -1,5 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { openApiService } from '@/services/openapiService';
+import { authService } from '@/services/authService';
+import '@/services/authAxios';
 import { testGeneratorService } from '@/services/testGeneratorService';
 import { testExecutionService } from '@/services/testExecutionService';
 import { validationService } from '@/services/validationService';
@@ -17,6 +19,11 @@ import type { WorkflowScenario } from '@/types/workflow.types';
 import type { FrontendEnvironmentProfile } from '@/types/environment.types';
 
 // Deterministic OpenAPI 3.0 specification for cross-feature integration testing
+// Cross-feature API integration is opt-in. Do not probe the app's default backend
+// port from an ordinary unit-test run; callers must provide a controlled endpoint.
+const configuredBackendUrl = process.env.APIFORGE_INTEGRATION_API_URL;
+const BACKEND_BASE_URL = configuredBackendUrl || 'http://127.0.0.1:1';
+
 const SAMPLE_OPENAPI_SPEC = JSON.stringify({
   openapi: '3.0.3',
   info: {
@@ -24,7 +31,7 @@ const SAMPLE_OPENAPI_SPEC = JSON.stringify({
     version: '1.0.0',
     description: 'API specification for end-to-end integration verification',
   },
-  servers: [{ url: 'http://localhost:3001', description: 'Local Backend' }],
+  servers: [{ url: BACKEND_BASE_URL, description: 'Local Backend' }],
   paths: {
     '/api/mock/serve/items': {
       get: {
@@ -61,16 +68,32 @@ const SAMPLE_OPENAPI_SPEC = JSON.stringify({
   },
 });
 
-const isBackendRunning = await fetch('http://localhost:3001/health', { signal: AbortSignal.timeout(600) })
-  .then((r) => r.ok)
-  .catch(() => false);
+const isBackendRunning = configuredBackendUrl
+  ? await fetch(`${configuredBackendUrl.replace(/\/+$/, '')}/health`, { signal: AbortSignal.timeout(600) })
+      .then((r) => r.ok)
+      .catch(() => false)
+  : false;
+
+async function createIntegrationSession() {
+  const response = await authService.signup({
+    name: 'Cross-feature QA',
+    email: `cross-feature-${Date.now()}@example.test`,
+    password: 'CrossFeature!2026',
+  });
+  if (!response.success || !response.token) {
+    throw new Error('Could not create the isolated integration-test session.');
+  }
+  localStorage.setItem('apiforge-auth-session', JSON.stringify({ state: { token: response.token }, version: 0 }));
+}
 
 describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     useAppStore.getState().resetWorkspace();
   });
 
   describe.runIf(isBackendRunning)('Task 1 & Task 2 — Complete End-to-End User Journey Pipeline', () => {
+    beforeEach(createIntegrationSession);
+
     it('executes full pipeline: Import OpenAPI -> Generate Tests -> Execute -> Validate Contract -> AI Diagnose -> Generate Report -> Persist & Rehydrate', async () => {
       // 1. Setup Mock Endpoint to serve deterministic responses for test execution
       const createdRoute = await mockServerService.createRoute({
@@ -127,7 +150,7 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
           ...testCaseToRun,
           request: {
             ...testCaseToRun.request,
-            url: 'http://localhost:3001/api/mock/serve/items',
+            url: `${BACKEND_BASE_URL}/api/mock/serve/items`,
           },
         };
 
@@ -244,6 +267,8 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
   });
 
   describe.runIf(isBackendRunning)('Task 3 — Workflows and Mock Server Integration', () => {
+    beforeEach(createIntegrationSession);
+
     it('creates mock route, dispatches request, checks traffic logs, and executes multi-step workflow with variable substitution', async () => {
       // 1. Create Mock Route
       const orderRoute = await mockServerService.createRoute({
@@ -265,7 +290,7 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
         // 2. Direct HTTP Dispatch via requestService
         const directReqResult = await requestService.executeRequest({
           method: 'POST',
-          url: 'http://localhost:3001/api/mock/serve/orders/checkout',
+          url: `${BACKEND_BASE_URL}/api/mock/serve/orders/checkout`,
           headers: [{ id: 'h1', key: 'Content-Type', value: 'application/json', enabled: true }],
           body: JSON.stringify({ customer: 'Ada Lovelace', quantity: 2 }),
           auth: { type: 'none' },
@@ -293,7 +318,7 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
         const workflowEnvironment: FrontendEnvironmentProfile = {
           id: 'env_wf_test',
           name: 'Integration Test Environment',
-          baseUrl: 'http://localhost:3001',
+          baseUrl: BACKEND_BASE_URL,
           variables: [
             { name: 'customerCode', value: 'CUST-001', isSecret: false, enabled: true },
           ],
@@ -310,7 +335,7 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
               enabled: true,
               request: {
                 method: 'POST',
-                url: 'http://localhost:3001/api/mock/serve/orders/checkout',
+                url: `${BACKEND_BASE_URL}/api/mock/serve/orders/checkout`,
                 headers: [{ id: 'h1', key: 'Content-Type', value: 'application/json', enabled: true }],
                 body: JSON.stringify({ code: '{{customerCode}}' }),
                 auth: { type: 'none' },
@@ -330,7 +355,7 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
               dependsOn: ['step_1_create_order'],
               request: {
                 method: 'GET',
-                url: 'http://localhost:3001/health',
+                url: `${BACKEND_BASE_URL}/health`,
                 headers: [{ id: 'h2', key: 'X-Extracted-Id', value: '{{extractedOrderId}}', enabled: true }],
                 auth: { type: 'none' },
               },
@@ -342,7 +367,7 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
               isTeardown: true,
               request: {
                 method: 'GET',
-                url: 'http://localhost:3001/health',
+                url: `${BACKEND_BASE_URL}/health`,
                 headers: [],
                 auth: { type: 'none' },
               },
@@ -383,10 +408,10 @@ describe('Phase 12 Task 3: Cross-Feature Integration Suite', () => {
       useAppStore.getState().createEnvironment({
         name: 'Production Secrets',
         description: 'Environment with secrets',
-        baseUrl: 'http://localhost:3001',
+        baseUrl: BACKEND_BASE_URL,
         variables: [
           { name: 'API_KEY', value: 'super-secret-key-9999', isSecret: true, enabled: true },
-          { name: 'PUBLIC_URL', value: 'http://localhost:3001', isSecret: false, enabled: true },
+          { name: 'PUBLIC_URL', value: BACKEND_BASE_URL, isSecret: false, enabled: true },
         ],
       });
 

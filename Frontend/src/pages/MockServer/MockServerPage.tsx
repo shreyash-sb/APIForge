@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import {
   AlertCircle,
   CheckCircle2,
@@ -21,6 +22,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { downloadJsonFile, exportMockRoutesToOpenApi } from '@/lib/openApiExporter';
 import { mockServerService } from '@/services/mockServerService';
+import { getMockServeBaseUrl } from '@/config/api';
 import { useAppStore } from '@/store/useAppStore';
 import type { HttpMethod } from '@/types/request.types';
 import type { MockRequestLog, MockRoute } from '@/types/mockServer.types';
@@ -70,11 +72,13 @@ export function MockServerPage() {
   const [formBody, setFormBody] = useState('{\n  "message": "success"\n}');
   const [formDescription, setFormDescription] = useState('');
   const [bodyParseError, setBodyParseError] = useState<string | null>(null);
+  // Save errors render inside the modal; the page-level banner is hidden behind the overlay.
+  const [formError, setFormError] = useState<string | null>(null);
 
   // Log Inspection Modal
   const [selectedLog, setSelectedLog] = useState<MockRequestLog | null>(null);
 
-  const mockBaseUrl = 'http://localhost:3001/api/mock/serve';
+  const mockBaseUrl = getMockServeBaseUrl();
 
   const loadRoutesAndLogs = useCallback(async () => {
     setLoading(true);
@@ -107,6 +111,7 @@ export function MockServerPage() {
     setFormBody('{\n  "status": "success",\n  "data": []\n}');
     setFormDescription('Simulated mock endpoint');
     setBodyParseError(null);
+    setFormError(null);
     setModalOpen(true);
   };
 
@@ -124,6 +129,7 @@ export function MockServerPage() {
     );
     setFormDescription(route.description || '');
     setBodyParseError(null);
+    setFormError(null);
     setModalOpen(true);
   };
 
@@ -168,7 +174,7 @@ export function MockServerPage() {
       setModalOpen(false);
       await loadRoutesAndLogs();
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save mock route');
+      setFormError(err instanceof Error ? err.message : 'Failed to save mock route');
     } finally {
       setActionLoading(false);
       setTimeout(() => setSuccessMsg(null), 4000);
@@ -186,8 +192,12 @@ export function MockServerPage() {
     }
   };
 
-  const handleDeleteRoute = async (id: string, path: string) => {
-    if (!confirm(`Are you sure you want to delete mock route '${path}'?`)) return;
+  const [pendingDelete, setPendingDelete] = useState<{ id: string; path: string } | null>(null);
+  const handleDeleteRoute = (id: string, path: string) => setPendingDelete({ id, path });
+  const confirmDeleteRoute = async () => {
+    if (!pendingDelete) return;
+    const { id, path } = pendingDelete;
+    setPendingDelete(null);
     try {
       await mockServerService.deleteRoute(id);
       setMockRoutes(mockRoutes.filter((r) => r.id !== id));
@@ -278,8 +288,8 @@ export function MockServerPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-lg font-bold tracking-tight text-slate-900">Mock Server Engine</h1>
-                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-700 border border-emerald-200">
-                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700 border border-emerald-200">
+                  <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                   Live
                 </span>
               </div>
@@ -314,7 +324,7 @@ export function MockServerPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="outline" size="sm" onClick={loadRoutesAndLogs} disabled={loading} className="gap-1.5 text-xs h-8">
+            <Button variant="outline" size="sm" onClick={loadRoutesAndLogs} disabled={loading} className="gap-1.5">
               <RefreshCw className={`h-3.5 w-3.5 ${loading ? 'animate-spin' : ''}`} />
               Refresh
             </Button>
@@ -323,7 +333,7 @@ export function MockServerPage() {
               size="sm"
               onClick={handleExportOpenApi}
               disabled={mockRoutes.length === 0}
-              className="gap-1.5 bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100 text-xs h-8"
+              className="gap-1.5 bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100"
               title="Export all mock routes to OpenAPI 3.1 JSON"
             >
               <Download className="h-3.5 w-3.5 text-sky-600" />
@@ -335,13 +345,13 @@ export function MockServerPage() {
                 size="sm"
                 onClick={handleGenerateFromSpec}
                 disabled={actionLoading}
-                className="gap-1.5 bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100 text-xs h-8"
+                className="gap-1.5 bg-violet-50 text-violet-700 border-violet-200 hover:bg-violet-100"
               >
                 <Sparkles className="h-3.5 w-3.5 text-violet-600" />
                 Generate from OpenAPI Spec
               </Button>
             )}
-            <Button onClick={openCreateModal} size="sm" className="gap-1.5 shadow-sm text-xs h-8">
+            <Button onClick={openCreateModal} size="sm" className="gap-1.5 shadow-sm">
               <Plus className="h-3.5 w-3.5" />
               New Mock Route
             </Button>
@@ -418,7 +428,7 @@ export function MockServerPage() {
           </div>
         ) : (
           mockLogs.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={handleClearLogs} className="text-xs text-rose-600 gap-1 hover:bg-rose-50 h-8">
+            <Button variant="ghost" size="sm" onClick={handleClearLogs} className="text-rose-600 gap-1 hover:bg-rose-50">
               <Trash2 className="h-3.5 w-3.5" /> Clear Logs
             </Button>
           )
@@ -468,7 +478,7 @@ export function MockServerPage() {
                         </span>
                       ) : null}
                       {route.source === 'OPENAPI' && (
-                        <span className="rounded bg-violet-100 text-violet-800 px-1.5 py-0.5 text-[10px] font-semibold">
+                        <span className="rounded bg-violet-100 text-violet-800 px-1.5 py-0.5 text-[11px] font-semibold">
                           OpenAPI
                         </span>
                       )}
@@ -490,14 +500,14 @@ export function MockServerPage() {
                     >
                       {route.enabled ? 'Enabled' : 'Disabled'}
                     </button>
-                    <Button variant="outline" size="sm" onClick={() => openEditModal(route)} className="text-xs h-7 gap-1">
+                    <Button variant="outline" size="sm" onClick={() => openEditModal(route)} className="gap-1">
                       <Sliders className="h-3 w-3" /> Edit
                     </Button>
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={() => handleTestInBuilder(route)}
-                      className="text-xs h-7 text-indigo-600 hover:bg-indigo-50 gap-1"
+                      className="text-indigo-600 hover:bg-indigo-50 gap-1"
                       title="Open in Request Builder"
                     >
                       <ExternalLink className="h-3 w-3" /> Test
@@ -506,7 +516,7 @@ export function MockServerPage() {
                       variant="ghost"
                       size="sm"
                       onClick={() => handleDeleteRoute(route.id, route.path)}
-                      className="text-xs h-7 text-rose-600 hover:bg-rose-50"
+                      className="text-rose-600 hover:bg-rose-50"
                       title="Delete Route"
                     >
                       <Trash2 className="h-3 w-3" />
@@ -539,7 +549,7 @@ export function MockServerPage() {
             <div className="panel-surface overflow-hidden border border-slate-200/80 bg-white">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 uppercase tracking-wider text-[10px]">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-slate-500 text-[11px]">
                     <tr>
                       <th className="p-3">Time</th>
                       <th className="p-3">Method</th>
@@ -558,7 +568,7 @@ export function MockServerPage() {
                         </td>
                         <td className="p-3">
                           <span
-                            className={`rounded px-1.5 py-0.5 text-[10px] font-bold border ${
+                            className={`rounded px-1.5 py-0.5 text-[11px] font-bold border ${
                               methodColors[log.method] || 'bg-slate-100 text-slate-800'
                             }`}
                           >
@@ -628,7 +638,7 @@ export function MockServerPage() {
             onClick={() => setModalOpen(false)}
             aria-label="Close modal overlay"
           />
-          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-sheet border border-slate-200 space-y-4 max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-bold text-slate-950">
               {editingRouteId ? 'Edit Mock Route' : 'Configure New Mock Route'}
             </h3>
@@ -667,7 +677,7 @@ export function MockServerPage() {
                   placeholder="/api/users/:id"
                   className="font-mono text-xs"
                 />
-                <span className="text-[10px] text-slate-400">
+                <span className="text-[11px] text-slate-400">
                   Supports dynamic path parameters like <code>:id</code> or <code>&#123;id&#125;</code> and wildcards <code>*</code>.
                 </span>
               </div>
@@ -736,6 +746,11 @@ export function MockServerPage() {
               </div>
             </div>
 
+            {formError && (
+              <p role="alert" className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs font-semibold text-rose-700">
+                {formError}
+              </p>
+            )}
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-slate-100">
               <Button variant="ghost" size="sm" onClick={() => setModalOpen(false)}>
                 Cancel
@@ -757,7 +772,7 @@ export function MockServerPage() {
             onClick={() => setSelectedLog(null)}
             aria-label="Close modal overlay"
           />
-          <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
+          <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-sheet border border-slate-200 space-y-4">
             <div className="flex items-center justify-between border-b pb-3">
               <div className="flex items-center gap-2">
                 <span
@@ -827,6 +842,15 @@ export function MockServerPage() {
           </div>
         </div>
       )}
+      <ConfirmDialog
+        open={Boolean(pendingDelete)}
+        title="Delete mock route?"
+        message={<>The route <code className="font-mono">{pendingDelete?.path}</code> will stop responding immediately. This cannot be undone.</>}
+        confirmLabel="Delete route"
+        destructive
+        onCancel={() => setPendingDelete(null)}
+        onConfirm={() => void confirmDeleteRoute()}
+      />
     </div>
   );
 }

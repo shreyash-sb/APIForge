@@ -12,9 +12,30 @@ import type {
   UserRole,
 } from '../types/auth.types.js';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'apiforge-cryptographic-secure-jwt-secret-key-2026';
-const MAX_FAILED_ATTEMPTS = 5;
+export function resolveJwtSecret(env: NodeJS.ProcessEnv = process.env): string {
+  const configuredSecret = env.JWT_SECRET?.trim();
+  if (configuredSecret) {
+    if (Buffer.byteLength(configuredSecret, 'utf8') < 32) {
+      throw new Error('JWT_SECRET must contain at least 32 bytes.');
+    }
+    return configuredSecret;
+  }
+  if (env.NODE_ENV === 'production') {
+    throw new Error('JWT_SECRET must be configured when NODE_ENV=production.');
+  }
+  // Per-process random key keeps local development functional without a shared signing secret.
+  // Sessions naturally expire on server restart unless the developer configures a private key.
+  return crypto.randomBytes(64).toString('base64url');
+}
+
+const JWT_SECRET = resolveJwtSecret();
+const MAX_FAILED_ATTEMPTS = 5; // per (email, client IP)
+const ACCOUNT_MAX_FAILED_ATTEMPTS = 20; // account-wide, across all clients
 const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+const MAX_THROTTLE_ENTRIES = 50_000;
+const DUMMY_SALT = crypto.randomBytes(16).toString('hex');
+const LOGIN_FAILED_MESSAGE = 'Invalid email or password.';
+const LOGIN_LOCKED_MESSAGE = 'Too many failed sign-in attempts. Please wait 15 minutes and try again.';
 const TOKEN_EXPIRY_MS = 24 * 60 * 60 * 1000; // 24 hours
 const EXTENDED_TOKEN_EXPIRY_MS = 7 * 24 * 60 * 60 * 1000; // 7 days (remember me)
 
@@ -22,7 +43,15 @@ export class AuthService {
   private users: Map<string, User> = new Map(); // key: userId
   private emailIndex: Map<string, string> = new Map(); // key: lowercase email -> userId
   private loginActivities: LoginActivity[] = [];
-  private invalidatedTokens: Set<string> = new Set();
+  /**
+   * Revoked sessions as sha256(token) -> token expiry (epoch ms). Entries are pruned once
+   * the token has expired (expired tokens are rejected anyway), so the list stays bounded
+   * by the number of tokens revoked within the maximum token lifetime.
+   */
+  private revokedTokens: Map<string, number> = new Map();
+  private lastRevocationPrune = 0;
+  /** Failed sign-in tracking keyed by `${email}|${clientIp}` (insertion-ordered for eviction). */
+  private loginThrottle: Map<string, { failures: number; firstFailureAt: number; blockedUntil?: number }> = new Map();
 
   constructor() {
     // Zero hardcoded demo accounts - user creates and owns their account
@@ -35,7 +64,8 @@ export class AuthService {
     this.users.clear();
     this.emailIndex.clear();
     this.loginActivities = [];
-    this.invalidatedTokens.clear();
+    this.revokedTokens.clear();
+    this.loginThrottle.clear();
   }
 
   /**
@@ -154,11 +184,11 @@ export class AuthService {
     return { token, expiresIn: rememberMe ? '7d' : '24h' };
   }
 
-  public verifyToken(token: string): { valid: boolean; user?: SanitizedUser; error?: string } {
+  public verifyToken(token: string): { valid: boolean; user?: SanitizedUser; error?: string; expiresAt?: number } {
     if (!token || typeof token !== 'string') {
       return { valid: false, error: 'Token missing' };
     }
-    if (this.invalidatedTokens.has(token)) {
+    if (this.revokedTokens.has(this.tokenHash(token))) {
       return { valid: false, error: 'Token has been revoked or logged out' };
     }
 
@@ -191,10 +221,42 @@ export class AuthService {
         return { valid: false, error: 'User no longer exists' };
       }
 
-      return { valid: true, user: this.sanitizeUser(user) };
+      return { valid: true, user: this.sanitizeUser(user), expiresAt: Number(payload.exp) };
     } catch {
       return { valid: false, error: 'Invalid token payload' };
     }
+  }
+
+  private tokenHash(token: string): string {
+    return crypto.createHash('sha256').update(token).digest('hex');
+  }
+
+  /** Records a revocation until the token's own expiry, then forgets it. */
+  private revokeToken(token: string): void {
+    let expiresAt = Date.now() + EXTENDED_TOKEN_EXPIRY_MS;
+    try {
+      const payload = JSON.parse(Buffer.from(token.split('.')[1] ?? '', 'base64url').toString('utf-8'));
+      if (Number.isFinite(payload?.exp)) expiresAt = Math.min(Number(payload.exp), expiresAt);
+    } catch {
+      // Malformed tokens keep the maximum lifetime; they can never verify anyway.
+    }
+    this.revokedTokens.set(this.tokenHash(token), expiresAt);
+    this.pruneRevokedTokens();
+  }
+
+  private pruneRevokedTokens(force = false): void {
+    const now = Date.now();
+    if (!force && now - this.lastRevocationPrune < 60_000) return;
+    this.lastRevocationPrune = now;
+    for (const [hash, expiresAt] of this.revokedTokens) {
+      if (expiresAt <= now) this.revokedTokens.delete(hash);
+    }
+  }
+
+  /** Number of tracked revocations (diagnostics/tests). */
+  public revokedTokenCount(): number {
+    this.pruneRevokedTokens(true);
+    return this.revokedTokens.size;
   }
 
   private sanitizeUser(user: User): SanitizedUser {
@@ -254,7 +316,8 @@ export class AuthService {
       id: `usr_${crypto.randomUUID().slice(0, 8)}`,
       name,
       email,
-      role: data.role || 'engineer',
+      // Public signup must not accept client-selected privileged roles.
+      role: 'engineer',
       passwordHash,
       salt,
       createdAt: now,
@@ -290,106 +353,63 @@ export class AuthService {
     };
   }
 
+  /**
+   * Sign-in with enumeration- and lockout-abuse-resistant behaviour:
+   *  - known and unknown emails get identical messages (and comparable timing);
+   *  - failures are throttled per (email, client IP): 5 failures block that IP for 15 min,
+   *    so an attacker cannot lock a victim out from the victim's own network;
+   *  - an account-wide limit still stops distributed guessing.
+   */
   public login(data: LoginRequest, ip: string, userAgent: string): AuthResponse {
     const email = (data.email || '').trim().toLowerCase();
     const password = data.password || '';
     const deviceType = this.parseDeviceType(userAgent);
+    const clientIp = ip || '127.0.0.1';
 
     if (!email || !password) {
       return { success: false, error: 'Email and password are required' };
     }
 
+    const throttleKey = `${email}|${clientIp}`;
     const userId = this.emailIndex.get(email);
-    if (!userId) {
-      this.recordActivity({
-        userEmail: email,
-        ip: ip || '127.0.0.1',
-        userAgent: userAgent || 'Unknown',
-        status: 'FAILED_NOT_FOUND',
-        failureReason: 'No user registered with this email',
-        deviceType,
-      });
-      return { success: false, error: 'Invalid email or password' };
+    const user = userId ? this.users.get(userId) : undefined;
+    const record = (status: LoginActivity['status'], failureReason?: string) =>
+      this.recordActivity({ userId: user?.id, userEmail: email, ip: clientIp, userAgent: userAgent || 'Unknown', status, failureReason, deviceType });
+
+    if (this.isThrottled(throttleKey) || this.isAccountLocked(user)) {
+      record('LOCKED', 'Sign-in temporarily blocked after repeated failures.');
+      return { success: false, locked: true, error: LOGIN_LOCKED_MESSAGE };
     }
 
-    const user = this.users.get(userId)!;
+    // Always run the password hash so response time does not reveal whether the email exists.
+    const passwordValid = user
+      ? this.verifyPassword(password, user.salt, user.passwordHash)
+      : (this.verifyPassword(password, DUMMY_SALT, this.dummyHash()), false);
 
-    // Check account lockout
-    if (user.lockoutUntil) {
-      const lockExpiry = new Date(user.lockoutUntil).getTime();
-      if (Date.now() < lockExpiry) {
-        const minutesLeft = Math.ceil((lockExpiry - Date.now()) / (60 * 1000));
-        this.recordActivity({
-          userId: user.id,
-          userEmail: email,
-          ip: ip || '127.0.0.1',
-          userAgent: userAgent || 'Unknown',
-          status: 'LOCKED',
-          failureReason: `Account temporarily locked. Retry in ${minutesLeft}m.`,
-          deviceType,
-        });
-        return {
-          success: false,
-          error: `Too many failed login attempts. Account temporarily locked for ${minutesLeft} more minute(s).`,
-        };
-      } else {
-        // Lockout expired, reset counter
-        user.lockoutUntil = undefined;
-        user.failedLoginAttempts = 0;
+    if (!user || !passwordValid) {
+      const nowBlocked = this.registerFailure(throttleKey);
+      if (user) {
+        user.failedLoginAttempts += 1;
+        if (user.failedLoginAttempts >= ACCOUNT_MAX_FAILED_ATTEMPTS) {
+          user.lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString();
+        }
       }
+      const locked = nowBlocked || this.isAccountLocked(user);
+      record(locked ? 'LOCKED' : user ? 'FAILED_PASSWORD' : 'FAILED_NOT_FOUND', user ? 'Incorrect password' : 'No user registered with this email');
+      return locked
+        ? { success: false, locked: true, error: LOGIN_LOCKED_MESSAGE }
+        : { success: false, error: LOGIN_FAILED_MESSAGE };
     }
 
-    const passwordValid = this.verifyPassword(password, user.salt, user.passwordHash);
-
-    if (!passwordValid) {
-      user.failedLoginAttempts += 1;
-      let failureReason = 'Incorrect password';
-
-      if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
-        user.lockoutUntil = new Date(Date.now() + LOCKOUT_DURATION_MS).toISOString();
-        failureReason = `Maximum attempts reached (${MAX_FAILED_ATTEMPTS}). Locked for 15 minutes.`;
-      }
-
-      this.recordActivity({
-        userId: user.id,
-        userEmail: email,
-        ip: ip || '127.0.0.1',
-        userAgent: userAgent || 'Unknown',
-        status: user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS ? 'LOCKED' : 'FAILED_PASSWORD',
-        failureReason,
-        deviceType,
-      });
-
-      if (user.failedLoginAttempts >= MAX_FAILED_ATTEMPTS) {
-        return {
-          success: false,
-          error: 'Maximum failed login attempts exceeded. Account is locked for 15 minutes for your security.',
-        };
-      }
-
-      const remaining = MAX_FAILED_ATTEMPTS - user.failedLoginAttempts;
-      return {
-        success: false,
-        error: `Invalid email or password. (${remaining} attempt(s) remaining before lockout)`,
-      };
-    }
-
-    // Success: reset attempts
+    // Success: reset this client's throttle and the account-wide counter.
+    this.loginThrottle.delete(throttleKey);
     user.failedLoginAttempts = 0;
     user.lockoutUntil = undefined;
     user.updatedAt = new Date().toISOString();
 
     const sanitized = this.sanitizeUser(user);
     const { token, expiresIn } = this.createToken(sanitized, data.rememberMe);
-
-    this.recordActivity({
-      userId: user.id,
-      userEmail: email,
-      ip: ip || '127.0.0.1',
-      userAgent: userAgent || 'Unknown',
-      status: 'SUCCESS',
-      deviceType,
-    });
+    record('SUCCESS');
 
     return {
       success: true,
@@ -400,9 +420,50 @@ export class AuthService {
     };
   }
 
+  private isAccountLocked(user: User | undefined): boolean {
+    if (!user?.lockoutUntil) return false;
+    if (Date.now() < new Date(user.lockoutUntil).getTime()) return true;
+    user.lockoutUntil = undefined;
+    user.failedLoginAttempts = 0;
+    return false;
+  }
+
+  private isThrottled(key: string): boolean {
+    const entry = this.loginThrottle.get(key);
+    if (!entry) return false;
+    const now = Date.now();
+    if (entry.blockedUntil && entry.blockedUntil > now) return true;
+    if (entry.blockedUntil || now - entry.firstFailureAt > LOCKOUT_DURATION_MS) this.loginThrottle.delete(key);
+    return false;
+  }
+
+  /** Records a failure for (email, IP); returns true when this failure triggers a block. */
+  private registerFailure(key: string): boolean {
+    const now = Date.now();
+    const entry = this.loginThrottle.get(key);
+    const current = entry && now - entry.firstFailureAt <= LOCKOUT_DURATION_MS ? entry : { failures: 0, firstFailureAt: now };
+    current.failures += 1;
+    if (current.failures >= MAX_FAILED_ATTEMPTS) current.blockedUntil = now + LOCKOUT_DURATION_MS;
+    this.loginThrottle.delete(key);
+    this.loginThrottle.set(key, current);
+    // Bound memory: drop the oldest entries if an attacker sprays many emails.
+    while (this.loginThrottle.size > MAX_THROTTLE_ENTRIES) {
+      const oldest = this.loginThrottle.keys().next().value;
+      if (oldest === undefined) break;
+      this.loginThrottle.delete(oldest);
+    }
+    return Boolean(current.blockedUntil);
+  }
+
+  private dummyPasswordHash?: string;
+  private dummyHash(): string {
+    this.dummyPasswordHash ??= this.hashPassword(crypto.randomBytes(16).toString('hex'), DUMMY_SALT);
+    return this.dummyPasswordHash;
+  }
+
   public logout(token: string): { success: boolean; message: string } {
     if (token) {
-      this.invalidatedTokens.add(token);
+      this.revokeToken(token);
     }
     return { success: true, message: 'Logged out successfully' };
   }
@@ -460,7 +521,7 @@ export class AuthService {
 
     // 1. Invalidate active token if provided
     if (token) {
-      this.invalidatedTokens.add(token);
+      this.revokeToken(token);
     }
 
     // 2. Remove user from index and storage
@@ -476,6 +537,14 @@ export class AuthService {
         UserModel.deleteOne({ id: userId }).catch(() => {}),
         LoginActivityModel.deleteMany({ userId }).catch(() => {}),
       ]);
+    }
+
+    // 5. Purge user collections
+    try {
+      const { collectionService } = await import('./collection.service.js');
+      await collectionService.deleteUserCollections(userId);
+    } catch {
+      // Ignore cleanup error
     }
 
     return {

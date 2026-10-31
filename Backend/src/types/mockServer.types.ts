@@ -5,6 +5,8 @@ import type { HttpMethod } from './request.types.js';
  */
 export interface MockRoute {
   id: string;
+  /** Authenticated owner of a private route. Missing owner means legacy/system route. */
+  ownerUserId?: string;
   name: string;
   description?: string;
   method: HttpMethod;
@@ -26,6 +28,8 @@ export interface MockRoute {
  */
 export interface MockRequestLog {
   id: string;
+  /** Owner of the matched private route; unmatched and legacy route logs are unowned. */
+  ownerUserId?: string;
   timestamp: string;
   method: string;
   url: string;

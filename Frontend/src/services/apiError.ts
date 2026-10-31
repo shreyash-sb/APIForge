@@ -37,10 +37,17 @@ export function formatApiErrorMessage(error: unknown, fallbackMessage: string): 
       if (typeof data.message === 'string' && data.message.trim()) {
         return sanitizeErrorMessage(data.message);
       }
+      // Some backend routes (e.g. auth middleware) return { error: "message" }.
+      if (typeof data.error === 'string' && data.error.trim()) {
+        return sanitizeErrorMessage(data.error);
+      }
     }
 
     // 4. HTTP status codes
     const status = error.response.status;
+    if (status === 401) {
+      return 'Your session has expired. Please sign in again.';
+    }
     if (status === 400) {
       return 'Bad request. Please verify the request parameters and specification format.';
     }

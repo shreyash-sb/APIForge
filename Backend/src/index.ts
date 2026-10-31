@@ -12,9 +12,11 @@ import workflowRoutes from './routes/workflow.routes.js';
 import mockServerRoutes from './routes/mockServer.routes.js';
 import assistantRoutes from './routes/assistant.routes.js';
 import authRoutes from './routes/auth.routes.js';
-import streamRoutes from './routes/stream.routes.js';
-import agentRoutes from './routes/agent.routes.js';
+import collectionRoutes from './routes/collection.routes.js';
+import aiSettingsRoutes, { aiSettingsBodyParser } from './routes/aiSettings.routes.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { requireAuth } from './middleware/requireAuth.js';
+import { aiRequestRateLimiter, authLoginRateLimiter, authSignupRateLimiter } from './middleware/rateLimiter.js';
 import mongoose from 'mongoose';
 
 // Environment variables loaded via import 'dotenv/config'
@@ -30,6 +32,8 @@ if (process.env.MONGODB_URI) {
       console.log('🍃 MongoDB connected successfully');
       const { authService } = await import('./services/auth.service.js');
       await authService.hydrateFromMongo();
+      const { collectionService } = await import('./services/collection.service.js');
+      await collectionService.hydrateFromMongo();
     })
     .catch((err: Error) => console.warn('⚠️ MongoDB connection warning:', err.message));
 }
@@ -40,6 +44,14 @@ const allowedOrigins = process.env.FRONTEND_URL
   : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'];
 
 const isDev = process.env.NODE_ENV !== 'production';
+
+// Only trust X-Forwarded-For when explicitly deployed behind a known reverse proxy
+// (e.g. TRUST_PROXY=1 or TRUST_PROXY=loopback). Otherwise req.ip is the socket address,
+// so clients cannot spoof their IP to evade rate limits or forge audit logs.
+if (process.env.TRUST_PROXY) {
+  const value = process.env.TRUST_PROXY.trim();
+  app.set('trust proxy', /^\d+$/.test(value) ? Number(value) : value === 'true' ? true : value);
+}
 
 // Middleware
 app.use(cors({
@@ -60,23 +72,28 @@ app.use(cors({
   credentials: true,
 }));
 
+// Tighter body limits for AI routes are registered before the general parser (first parser wins).
+app.use('/api/ai-settings', aiSettingsBodyParser);
+app.use('/api/assistant', express.json({ limit: '256kb' }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Routes
-app.use('/api/requests', requestRoutes);
-app.use('/api/openapi', openApiRoutes);
-app.use('/api/tests', testGeneratorRoutes);
-app.use('/api/tests', testExecutionRoutes);
-app.use('/api/validation', validationRoutes);
-app.use('/api/diagnosis', diagnosisRoutes);
-app.use('/api/reports', reportRoutes);
-app.use('/api/workflows', workflowRoutes);
+app.use('/api/requests', requireAuth, requestRoutes);
+app.use('/api/openapi', requireAuth, openApiRoutes);
+app.use('/api/tests', requireAuth, testGeneratorRoutes);
+app.use('/api/tests', requireAuth, testExecutionRoutes);
+app.use('/api/validation', requireAuth, validationRoutes);
+app.use('/api/diagnosis', requireAuth, aiRequestRateLimiter, diagnosisRoutes);
+app.use('/api/reports', requireAuth, reportRoutes);
+app.use('/api/workflows', requireAuth, workflowRoutes);
 app.use('/api/mock', mockServerRoutes);
-app.use('/api/assistant', assistantRoutes);
+app.use('/api/assistant', requireAuth, aiRequestRateLimiter, assistantRoutes);
+app.use('/api/ai-settings', requireAuth, aiSettingsRoutes);
+app.use('/api/auth/login', authLoginRateLimiter);
+app.use('/api/auth/signup', authSignupRateLimiter);
 app.use('/api/auth', authRoutes);
-app.use('/api/stream', streamRoutes);
-app.use('/api/agent', agentRoutes);
+app.use('/api/collections', requireAuth, collectionRoutes);
 
 // Health check
 app.get('/health', (req, res) => {

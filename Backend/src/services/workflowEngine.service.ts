@@ -817,8 +817,16 @@ export class WorkflowEngineService {
     results: WorkflowStepExecutionResult[],
     totalDurationMs: number
   ): WorkflowExecutionSummary {
-    const passed = results.filter((r) => r.status === 'PASSED_EXECUTION').length;
-    const failed = results.filter((r) => r.status === 'FAILED_EXECUTION' || r.status === 'ERROR').length;
+    // A step only counts as passed when execution, validation, and extraction all succeeded;
+    // an executed step with a failed assertion or extraction error is a failed step.
+    const isFullyPassed = (r: WorkflowStepExecutionResult) =>
+      r.status === 'PASSED_EXECUTION' &&
+      r.validationResult?.status !== 'VALIDATION_FAILED' &&
+      (!r.extractionErrors || r.extractionErrors.length === 0);
+    const passed = results.filter(isFullyPassed).length;
+    const failed = results.filter(
+      (r) => r.status === 'FAILED_EXECUTION' || r.status === 'ERROR' || (r.status === 'PASSED_EXECUTION' && !isFullyPassed(r))
+    ).length;
     
     const isBlocked = (r: WorkflowStepExecutionResult) =>
       r.status === 'SKIPPED' &&

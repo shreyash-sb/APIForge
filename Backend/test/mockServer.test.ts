@@ -29,6 +29,7 @@ function createMockHttp(options: {
   } as unknown as Parameters<MockServerController['serveMock']>[0];
 
   const res = {
+    locals: { authUser: { id: 'test-user' } },
     status(code: number) {
       statusCode = code;
       return this;
@@ -59,9 +60,9 @@ function createMockHttp(options: {
 test('MockServerService - Core Routing and Management', async (t) => {
   await t.test('1. Default seed routes are loaded correctly', () => {
     const service = new MockServerService();
-    const routes = service.getRoutes();
-    assert.ok(routes.length >= 3);
-    const userRoute = service.getRouteById('mock_route_users');
+    const routes = service.getRoutes('test-user');
+    assert.equal(routes.length, 0, 'Legacy routes without an owner are not exposed through private management');
+    const userRoute = service.matchRoute('GET', '/api/v1/users');
     assert.ok(userRoute !== undefined);
     assert.equal(userRoute?.method, 'GET');
     assert.equal(userRoute?.path, '/api/v1/users');
@@ -71,6 +72,7 @@ test('MockServerService - Core Routing and Management', async (t) => {
   await t.test('2. CRUD operations: create, update, delete mock route', () => {
     const service = new MockServerService();
     const created = service.createRoute({
+      ownerUserId: 'test-user',
       name: 'Test Create Order',
       method: 'POST',
       path: '/api/v1/orders',
@@ -88,14 +90,14 @@ test('MockServerService - Core Routing and Management', async (t) => {
     const updated = service.updateRoute(created.id, {
       statusCode: 200,
       name: 'Updated Order Name',
-    });
+    }, 'test-user');
     assert.equal(updated?.statusCode, 200);
     assert.equal(updated?.name, 'Updated Order Name');
 
     // Delete
-    const deleted = service.deleteRoute(created.id);
+    const deleted = service.deleteRoute(created.id, 'test-user');
     assert.equal(deleted, true);
-    assert.equal(service.getRouteById(created.id), undefined);
+    assert.equal(service.getRouteById(created.id, 'test-user'), undefined);
   });
 
   await t.test('3. Exact and parameterized route matching (:id and {id})', () => {
@@ -126,11 +128,10 @@ test('MockServerService - Core Routing and Management', async (t) => {
 
   await t.test('4. Disabled routes are excluded from matching', () => {
     const service = new MockServerService();
-    const route = service.getRouteById('mock_route_users');
-    assert.ok(route);
-    service.updateRoute(route.id, { enabled: false });
+    const route = service.createRoute({ ownerUserId: 'test-user', name: 'Disabled owned route', method: 'GET', path: '/owned-disabled', statusCode: 200, body: {}, enabled: true });
+    assert.ok(service.updateRoute(route.id, { enabled: false }, 'test-user'));
 
-    const match = service.matchRoute('GET', '/api/v1/users');
+    const match = service.matchRoute('GET', '/owned-disabled');
     assert.equal(match, undefined, 'Disabled route must not match incoming traffic');
   });
 
@@ -165,40 +166,42 @@ test('MockServerService - Core Routing and Management', async (t) => {
 
   await t.test('7. Traffic logging records requests and can be cleared', async () => {
     const service = new MockServerService();
-    service.clearLogs();
-    assert.equal(service.getLogs().length, 0);
+    service.createRoute({ ownerUserId: 'test-user', name: 'Private Log Route', method: 'POST', path: '/private-log', statusCode: 200, body: {}, enabled: true });
+    service.clearLogs('test-user');
+    assert.equal(service.getLogs('test-user').length, 0);
 
     await service.handleRequest(
       'POST',
-      '/api/v1/auth/login',
+      '/private-log',
       { ref: 'test' },
       { authorization: 'Bearer token' },
       { username: 'testuser' }
     );
 
-    const logs = service.getLogs();
+    const logs = service.getLogs('test-user');
     assert.equal(logs.length, 1);
     assert.equal(logs[0].method, 'POST');
-    assert.equal(logs[0].path, '/api/v1/auth/login');
+    assert.equal(logs[0].path, '/private-log');
     assert.equal(logs[0].responseStatus, 200);
     assert.equal(logs[0].queryParams.ref, 'test');
 
     assert.equal(logs[0].headers.authorization, '[REDACTED]');
 
-    service.clearLogs();
-    assert.equal(service.getLogs().length, 0);
+    service.clearLogs('test-user');
+    assert.equal(service.getLogs('test-user').length, 0);
   });
 
   await t.test('7a. Traffic logs redact nested secrets and bound oversized values', async () => {
     const service = new MockServerService();
+    service.createRoute({ ownerUserId: 'test-user', name: 'Private Log Route', method: 'POST', path: '/private-log', statusCode: 200, body: {}, enabled: true });
     await service.handleRequest(
       'POST',
-      '/api/v1/auth/login',
+      '/private-log',
       { apiKey: 'not-for-log' },
       { 'x-api-key': 'not-for-log' },
       { password: 'not-for-log', profile: { token: 'not-for-log' }, note: 'x'.repeat(5000) }
     );
-    const log = service.getLogs()[0];
+    const log = service.getLogs('test-user')[0];
     assert.equal(log.queryParams.apiKey, '[REDACTED]');
     assert.equal(log.headers['x-api-key'], '[REDACTED]');
     assert.deepEqual(log.body, {
@@ -249,7 +252,7 @@ test('MockServerService - Core Routing and Management', async (t) => {
       ],
     };
 
-    const genResult = service.generateFromSpec(spec, { defaultDelayMs: 15 });
+    const genResult = service.generateFromSpec(spec, { defaultDelayMs: 15 }, 'test-user');
     assert.equal(genResult.generatedCount, 1);
     const generatedRoute = genResult.routes[0];
     assert.equal(generatedRoute.path, '/store/products');
@@ -270,7 +273,7 @@ test('MockServerController - HTTP API Endpoints', async (t) => {
     assert.equal(http.getStatus(), 200);
     const data = http.getData() as { routes: unknown[]; total: number };
     assert.ok(Array.isArray(data.routes));
-    assert.ok(data.total >= 3);
+    assert.equal(data.total, 0);
   });
 
   await t.test('2. POST /api/mock/routes creates a valid route', async () => {
@@ -320,6 +323,8 @@ test('MockServerController - HTTP API Endpoints', async (t) => {
       method: 'GET',
       originalUrl: '/api/mock/serve/health',
     });
+    service.createRoute({ ownerUserId: 'test-user', name: 'Private Health', method: 'GET', path: '/private-health', statusCode: 200, body: {}, enabled: true });
+    serveHttp.req.originalUrl = '/api/mock/serve/private-health';
     await controller.serveMock(serveHttp.req, serveHttp.res);
 
     // Get logs
@@ -327,7 +332,7 @@ test('MockServerController - HTTP API Endpoints', async (t) => {
     await controller.getLogs(logHttp.req, logHttp.res);
     assert.equal(logHttp.getStatus(), 200);
     const logData = logHttp.getData() as { logs: unknown[]; total: number };
-    assert.ok(logData.total >= 1);
+    assert.equal(logData.total, 1);
 
     // Clear logs
     const clearHttp = createMockHttp({});
@@ -418,14 +423,14 @@ test('MockServerService - Advanced Edge Cases & Constraints', async (t) => {
 
   await t.test('2. Circular buffer caps traffic logs at 150 items', async () => {
     const service = new MockServerService();
-    service.clearLogs();
+    service.createRoute({ ownerUserId: 'test-user', name: 'Owned Health', method: 'GET', path: '/private-health', statusCode: 200, body: {}, enabled: true });
 
     // Generate 160 requests
     for (let i = 1; i <= 160; i++) {
-      await service.handleRequest('GET', `/health?reqId=${i}`, { reqId: String(i) }, {});
+      await service.handleRequest('GET', `/private-health?reqId=${i}`, { reqId: String(i) }, {});
     }
 
-    const logs = service.getLogs();
+    const logs = service.getLogs('test-user');
     assert.equal(logs.length, 150, 'Logs must cap at maximum 150 entries');
     // Most recent request should be at index 0
     assert.equal(logs[0].queryParams.reqId, '160');
@@ -457,7 +462,9 @@ test('MockServerService - Advanced Edge Cases & Constraints', async (t) => {
 
   await t.test('4. OpenAPI generation with overwriteExisting: true resets existing routes', () => {
     const service = new MockServerService();
-    assert.ok(service.getRoutes().length >= 4);
+    service.createRoute({ ownerUserId: 'test-user', name: 'Existing owned route', method: 'GET', path: '/existing', statusCode: 200, body: {}, enabled: true });
+    service.createRoute({ ownerUserId: 'other-user', name: 'Other owner route', method: 'GET', path: '/other', statusCode: 200, body: {}, enabled: true });
+    assert.equal(service.getRoutes('test-user').length, 1);
 
     const spec: ApiSpecification = {
       version: 'openapi-3.0.0',
@@ -483,9 +490,10 @@ test('MockServerService - Advanced Edge Cases & Constraints', async (t) => {
       ],
     };
 
-    const res = service.generateFromSpec(spec, { overwriteExisting: true, defaultDelayMs: 0 });
+    const res = service.generateFromSpec(spec, { overwriteExisting: true, defaultDelayMs: 0 }, 'test-user');
     assert.equal(res.generatedCount, 1);
-    assert.equal(service.getRoutes().length, 1, 'Only the newly generated route should exist when overwriteExisting is true');
-    assert.equal(service.getRoutes()[0].path, '/ping');
+    assert.equal(service.getRoutes('test-user').length, 1, 'Only the current user\'s routes are replaced');
+    assert.equal(service.getRoutes('test-user')[0].path, '/ping');
+    assert.equal(service.getRoutes('other-user')[0].path, '/other', 'overwriteExisting must preserve another owner\'s routes');
   });
 });

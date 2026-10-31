@@ -14,7 +14,7 @@ export function AIAssistantCard({ actions }: AIAssistantCardProps) {
       <div className="relative">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-500/10 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-violet-700">
+            <div className="inline-flex items-center gap-2 rounded-full border border-violet-200 bg-violet-500/10 px-3 py-1 text-xs font-semibold tracking-[0.18em] text-violet-700">
               <Sparkles className="h-3.5 w-3.5" />
               APIForge capabilities
             </div>

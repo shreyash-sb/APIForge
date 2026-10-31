@@ -15,7 +15,15 @@ export class RequestController {
       const apiRequest: ApiRequest = req.body;
 
       // Basic validation
-      if (!apiRequest.method || !apiRequest.url) {
+      if (
+        !apiRequest ||
+        typeof apiRequest !== 'object' ||
+        Array.isArray(apiRequest) ||
+        typeof apiRequest.method !== 'string' ||
+        !apiRequest.method.trim() ||
+        typeof apiRequest.url !== 'string' ||
+        !apiRequest.url.trim()
+      ) {
         res.status(400).json({
           success: false,
           error: {
@@ -27,7 +35,8 @@ export class RequestController {
       }
 
       // Execute the request
-      const result = await this.executorService.execute(apiRequest);
+      const { timeoutMs } = req.body as { timeoutMs?: unknown };
+      const result = await this.executorService.execute(apiRequest, { timeoutMs: typeof timeoutMs === 'number' ? timeoutMs : undefined });
 
       // Return result (status 200 even for failed requests, as the execution itself succeeded)
       res.status(200).json(result);

@@ -67,3 +67,17 @@ export interface ApiErrorResponse {
 }
 
 export type ApiExecutionResult = ApiResponse | ApiErrorResponse;
+
+/** Saved Request Builder draft (mirrors Frontend/src/types/request.types.ts). */
+export interface RequestDraft {
+  method: HttpMethod;
+  url: string;
+  queryParams: QueryParam[];
+  headers: Header[];
+  body: string;
+  auth: Auth;
+  scripts?: {
+    preRequest?: string;
+    postResponse?: string;
+  };
+}

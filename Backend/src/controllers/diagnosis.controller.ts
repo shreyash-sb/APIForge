@@ -1,16 +1,31 @@
 import type { Request, Response } from 'express';
 import { DiagnosisService } from '../services/diagnosis.service.js';
+import type { AiProvider } from '../services/aiProvider.service.js';
+import { aiCredentialStore, type AuthSession } from '../services/aiCredentialStore.service.js';
 import {
   MAX_DIAGNOSIS_BATCH_SIZE,
   type DiagnoseBatchItem,
   type DiagnoseSingleRequest,
 } from '../types/diagnosis.types.js';
 
+type ProviderResolver = (session: AuthSession | undefined) => AiProvider;
+
 export class DiagnosisController {
   private readonly diagnosisService: DiagnosisService;
+  private readonly resolveProvider: ProviderResolver;
 
-  constructor(diagnosisService: DiagnosisService = new DiagnosisService()) {
+  constructor(
+    diagnosisService: DiagnosisService = new DiagnosisService(),
+    resolveProvider: ProviderResolver = (session) => aiCredentialStore.resolveProvider(session)
+  ) {
     this.diagnosisService = diagnosisService;
+    this.resolveProvider = resolveProvider;
+  }
+
+  /** Request-scoped provider: the caller's own session key, or mock/demo when none is configured. */
+  private providerFor(res: Response): AiProvider | undefined {
+    if (this.diagnosisService.usesFixedProvider) return undefined;
+    return this.resolveProvider((res.locals as { authSession?: AuthSession } | undefined)?.authSession);
   }
 
   async diagnoseSingle(req: Request, res: Response): Promise<void> {
@@ -61,18 +76,27 @@ export class DiagnosisController {
         return;
       }
 
+      if (payload.executionResult.executionId !== payload.validationResult.executionId || !Array.isArray(payload.validationResult.assertions)) {
+        res.status(400).json({
+          error: {
+            message: 'Stale or mismatched evidence: validationResult must belong to the same executionId as executionResult.',
+          },
+        });
+        return;
+      }
+
       const result = await this.diagnosisService.diagnoseSingle(
         payload.testCase,
         payload.executionResult,
-        payload.validationResult
+        payload.validationResult,
+        this.providerFor(res)
       );
 
       res.status(200).json(result);
-    } catch (error) {
+    } catch {
       res.status(500).json({
         error: {
           message: 'An unexpected error occurred during AI diagnosis.',
-          details: error instanceof Error ? error.message : 'Unknown error',
         },
       });
     }
@@ -119,15 +143,27 @@ export class DiagnosisController {
           });
           return;
         }
+
+        if (
+          !item.executionResult.executionId ||
+          item.executionResult.executionId !== item.validationResult.executionId ||
+          !Array.isArray(item.validationResult.assertions)
+        ) {
+          res.status(400).json({
+            error: {
+              message: `Stale or mismatched evidence at index ${i}: executionResult and validationResult must share the same executionId.`,
+            },
+          });
+          return;
+        }
       }
 
-      const result = await this.diagnosisService.diagnoseBatch(payload.items);
+      const result = await this.diagnosisService.diagnoseBatch(payload.items, this.providerFor(res));
       res.status(200).json(result);
-    } catch (error) {
+    } catch {
       res.status(500).json({
         error: {
           message: 'An unexpected error occurred during batch AI diagnosis.',
-          details: error instanceof Error ? error.message : 'Unknown error',
         },
       });
     }

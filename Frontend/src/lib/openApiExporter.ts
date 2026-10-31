@@ -4,7 +4,8 @@
  */
 
 import type { MockRoute } from '@/types/mockServer.types';
-import type { ApiCollection, Header } from '@/types/request.types';
+import type { ApiCollection } from '@/types/request.types';
+import { getMockServeBaseUrl } from '@/config/api';
 
 function inferSchema(value: unknown): Record<string, unknown> {
   if (value === null) return { type: 'null' };
@@ -93,7 +94,7 @@ export function exportMockRoutesToOpenApi(
     },
     servers: [
       {
-        url: info.serverUrl || 'http://localhost:3001/api/mock/serve',
+        url: info.serverUrl || getMockServeBaseUrl(),
         description: 'APIForge Mock Server instance',
       },
     ],
@@ -108,7 +109,7 @@ export function exportCollectionToOpenApi(
   const paths: Record<string, Record<string, unknown>> = {};
 
   for (const req of collection.requests) {
-    let urlPath = '/';
+    let urlPath: string;
     try {
       const parsedUrl = new URL(req.url.startsWith('http') ? req.url : `http://localhost${req.url.startsWith('/') ? '' : '/'}${req.url}`);
       urlPath = parsedUrl.pathname;

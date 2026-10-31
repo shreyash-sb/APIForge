@@ -22,126 +22,129 @@ export function buildFullUrl(url: string, params: QueryParam[]): string {
   }
 }
 
-export function generateCurlSnippet(opt: CodeGenOptions): string {
-  const fullUrl = buildFullUrl(opt.url || 'https://api.example.com', opt.queryParams);
-  const parts: string[] = [`curl -X ${opt.method} "${fullUrl}"`];
+// ── Shared helpers ─────────────────────────────────────────────────────────
+// Every snippet must be runnable as generated: same headers/auth/body as the request,
+// with values escaped for the target language so quotes, `$`, or backticks cannot
+// break (or inject into) the code.
 
-  // Headers
-  opt.headers
+const BODY_METHODS = ['POST', 'PUT', 'PATCH', 'DELETE'];
+
+/** A double-quoted literal valid in JavaScript, Python, Go, and Java. */
+const str = (value: string) => JSON.stringify(value);
+
+/** POSIX shell single-quoting: nothing inside is interpreted. */
+const shellQuote = (value: string) => `'${value.replace(/'/g, `'\\''`)}'`;
+
+function base64(value: string): string {
+  const bytes = new TextEncoder().encode(value);
+  let binary = '';
+  bytes.forEach((byte) => { binary += String.fromCharCode(byte); });
+  return btoa(binary);
+}
+
+function snippetUrl(opt: CodeGenOptions): string {
+  const params = [...opt.queryParams];
+  if (opt.auth.type === 'apikey' && opt.auth.addTo === 'query' && opt.auth.key.trim()) {
+    params.push({ id: 'auth', key: opt.auth.key, value: opt.auth.value, enabled: true });
+  }
+  return buildFullUrl(opt.url || 'https://api.example.com', params);
+}
+
+/** User headers plus the configured authentication, in sending order. */
+function snippetHeaders(opt: CodeGenOptions): Array<[string, string]> {
+  const headers: Array<[string, string]> = opt.headers
     .filter((h) => h.enabled && h.key.trim())
-    .forEach((h) => {
-      parts.push(`  -H "${h.key}: ${h.value}"`);
-    });
-
-  // Auth
-  if (opt.auth.type === 'bearer' && opt.auth.token) {
-    parts.push(`  -H "Authorization: Bearer ${opt.auth.token}"`);
-  } else if (opt.auth.type === 'basic' && opt.auth.username) {
-    parts.push(`  -u "${opt.auth.username}:${opt.auth.password}"`);
-  } else if (opt.auth.type === 'apikey' && opt.auth.key) {
-    if (opt.auth.addTo === 'header') {
-      parts.push(`  -H "${opt.auth.key}: ${opt.auth.value}"`);
-    }
+    .map((h) => [h.key, h.value]);
+  if (opt.auth.type === 'bearer' && opt.auth.token.trim()) {
+    headers.push(['Authorization', `Bearer ${opt.auth.token.trim()}`]);
+  } else if (opt.auth.type === 'basic' && (opt.auth.username || opt.auth.password)) {
+    headers.push(['Authorization', `Basic ${base64(`${opt.auth.username}:${opt.auth.password}`)}`]);
+  } else if (opt.auth.type === 'apikey' && opt.auth.addTo === 'header' && opt.auth.key.trim()) {
+    headers.push([opt.auth.key, opt.auth.value]);
   }
+  return headers;
+}
 
-  // Body
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(opt.method) && opt.body.trim()) {
-    const escaped = opt.body.replace(/"/g, '\\"');
-    parts.push(`  -d "${escaped}"`);
+/** The body exactly as written, plus its parsed JSON when it is valid JSON. */
+function snippetBody(opt: CodeGenOptions): { raw: string; isJson: boolean } | undefined {
+  if (!BODY_METHODS.includes(opt.method) || !opt.body.trim()) return undefined;
+  try {
+    JSON.parse(opt.body);
+    return { raw: opt.body, isJson: true };
+  } catch {
+    return { raw: opt.body, isJson: false };
   }
+}
 
+export function generateCurlSnippet(opt: CodeGenOptions): string {
+  const parts: string[] = [`curl -X ${opt.method} ${shellQuote(snippetUrl(opt))}`];
+  for (const [key, value] of snippetHeaders(opt)) parts.push(`  -H ${shellQuote(`${key}: ${value}`)}`);
+  const body = snippetBody(opt);
+  if (body) parts.push(`  --data-raw ${shellQuote(body.raw)}`);
   return parts.join(' \\\n');
 }
 
 export function generateFetchSnippet(opt: CodeGenOptions): string {
-  const fullUrl = buildFullUrl(opt.url || 'https://api.example.com', opt.queryParams);
-  const headersObj: Record<string, string> = {};
-
-  opt.headers
-    .filter((h) => h.enabled && h.key.trim())
-    .forEach((h) => {
-      headersObj[h.key] = h.value;
-    });
-
-  if (opt.auth.type === 'bearer' && opt.auth.token) {
-    headersObj['Authorization'] = `Bearer ${opt.auth.token}`;
-  }
-
-  const options: Record<string, unknown> = {
-    method: opt.method,
-    headers: headersObj,
-  };
-
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(opt.method) && opt.body.trim()) {
-    try {
-      options.body = JSON.parse(opt.body);
-    } catch {
-      options.body = opt.body;
-    }
-  }
-
-  return `const response = await fetch("${fullUrl}", {
-  method: "${opt.method}",
-  headers: ${JSON.stringify(headersObj, null, 4).replace(/\n/g, '\n  ')},
-  ${options.body ? `body: JSON.stringify(${JSON.stringify(options.body, null, 2).replace(/\n/g, '\n  ')})` : ''}
+  const headers = Object.fromEntries(snippetHeaders(opt));
+  const body = snippetBody(opt);
+  const bodyLine = body
+    ? body.isJson
+      ? `\n  body: JSON.stringify(${JSON.stringify(JSON.parse(body.raw), null, 2).replace(/\n/g, '\n  ')}),`
+      : `\n  body: ${str(body.raw)},`
+    : '';
+  return `const response = await fetch(${str(snippetUrl(opt))}, {
+  method: ${str(opt.method)},
+  headers: ${JSON.stringify(headers, null, 2).replace(/\n/g, '\n  ')},${bodyLine}
 });
-const data = await response.json();
-console.log(data);`;
+const text = await response.text();
+console.log(response.status, text);`;
 }
 
 export function generatePythonSnippet(opt: CodeGenOptions): string {
-  const fullUrl = buildFullUrl(opt.url || 'https://api.example.com', opt.queryParams);
-  const lines = ['import requests', ''];
-
-  const headersObj: Record<string, string> = {};
-  opt.headers
-    .filter((h) => h.enabled && h.key.trim())
-    .forEach((h) => {
-      headersObj[h.key] = h.value;
-    });
-
-  if (opt.auth.type === 'bearer' && opt.auth.token) {
-    headersObj['Authorization'] = `Bearer ${opt.auth.token}`;
-  }
-
-  lines.push(`url = "${fullUrl}"`);
-  lines.push(`headers = ${JSON.stringify(headersObj, null, 4)}`);
-
-  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(opt.method) && opt.body.trim()) {
-    lines.push(`payload = ${opt.body}`);
-    lines.push(`response = requests.${opt.method.toLowerCase()}(url, headers=headers, json=payload)`);
+  const body = snippetBody(opt);
+  const lines = ['import requests'];
+  if (body?.isJson) lines.push('import json');
+  lines.push('', `url = ${str(snippetUrl(opt))}`);
+  const headers = snippetHeaders(opt);
+  lines.push(headers.length ? `headers = {\n${headers.map(([k, v]) => `    ${str(k)}: ${str(v)},`).join('\n')}\n}` : 'headers = {}');
+  const method = opt.method.toLowerCase();
+  const call = ['get', 'post', 'put', 'patch', 'delete', 'head', 'options'].includes(method)
+    ? `requests.${method}(url`
+    : `requests.request(${str(opt.method)}, url`;
+  if (body?.isJson) {
+    // json.loads keeps JSON literals (true/false/null) valid in Python.
+    lines.push(`payload = json.loads(${str(body.raw)})`);
+    lines.push(`response = ${call}, headers=headers, json=payload)`);
+  } else if (body) {
+    lines.push(`data = ${str(body.raw)}`);
+    lines.push(`response = ${call}, headers=headers, data=data)`);
   } else {
-    lines.push(`response = requests.${opt.method.toLowerCase()}(url, headers=headers)`);
+    lines.push(`response = ${call}, headers=headers)`);
   }
-
   lines.push('print(response.status_code)');
-  lines.push('print(response.json())');
-
+  lines.push('print(response.text)');
   return lines.join('\n');
 }
 
 export function generateGoSnippet(opt: CodeGenOptions): string {
-  const fullUrl = buildFullUrl(opt.url || 'https://api.example.com', opt.queryParams);
-  const hasBody = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(opt.method) && opt.body.trim();
-
+  const body = snippetBody(opt);
+  const headerLines = snippetHeaders(opt).map(([k, v]) => `    req.Header.Add(${str(k)}, ${str(v)})`).join('\n');
   return `package main
 
 import (
     "fmt"
     "io"
-    "net/http"
-    ${hasBody ? '"strings"' : ''}
+    "net/http"${body ? '\n    "strings"' : ''}
 )
 
 func main() {
-    url := "${fullUrl}"
-    ${hasBody ? `payload := strings.NewReader(\`${opt.body}\`)\n    req, _ := http.NewRequest("${opt.method}", url, payload)` : `req, _ := http.NewRequest("${opt.method}", url, nil)`}
-
-    ${opt.headers
-      .filter((h) => h.enabled && h.key.trim())
-      .map((h) => `req.Header.Add("${h.key}", "${h.value}")`)
-      .join('\n    ')}
-
+    url := ${str(snippetUrl(opt))}
+${body ? `    payload := strings.NewReader(${str(body.raw)})
+    req, err := http.NewRequest(${str(opt.method)}, url, payload)` : `    req, err := http.NewRequest(${str(opt.method)}, url, nil)`}
+    if err != nil {
+        panic(err)
+    }
+${headerLines ? `${headerLines}\n` : ''}
     res, err := http.DefaultClient.Do(req)
     if err != nil {
         panic(err)
@@ -155,9 +158,10 @@ func main() {
 }
 
 export function generateJavaSnippet(opt: CodeGenOptions): string {
-  const fullUrl = buildFullUrl(opt.url || 'https://api.example.com', opt.queryParams);
-  const hasBody = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(opt.method) && opt.body.trim();
-
+  const body = snippetBody(opt);
+  const headerLines = snippetHeaders(opt).map(([k, v]) => `\n            .header(${str(k)}, ${str(v)})`).join('');
+  // method(name, publisher) works for every verb; GET()/DELETE() take no body and PATCH() does not exist.
+  const publisher = body ? `HttpRequest.BodyPublishers.ofString(${str(body.raw)})` : 'HttpRequest.BodyPublishers.noBody()';
   return `import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -167,12 +171,8 @@ public class ApiClient {
     public static void main(String[] args) throws Exception {
         HttpClient client = HttpClient.newHttpClient();
         HttpRequest request = HttpRequest.newBuilder()
-            .uri(URI.create("${fullUrl}"))
-            ${opt.headers
-              .filter((h) => h.enabled && h.key.trim())
-              .map((h) => `.header("${h.key}", "${h.value}")`)
-              .join('\n            ')}
-            .${opt.method}(${hasBody ? `HttpRequest.BodyPublishers.ofString(\`${opt.body}\`)` : 'HttpRequest.BodyPublishers.noBody()'})
+            .uri(URI.create(${str(snippetUrl(opt))}))${headerLines}
+            .method(${str(opt.method)}, ${publisher})
             .build();
 
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());

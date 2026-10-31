@@ -19,7 +19,7 @@ export function StatCard({ title, value, change, tone }: StatsCardData) {
         <Icon className="h-5 w-5" />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="text-[11px] font-bold uppercase tracking-wider text-slate-500 truncate">{title}</p>
+        <p className="text-[11px] font-bold text-slate-500 truncate">{title}</p>
         <div className="flex items-baseline gap-2 mt-0.5">
           <span className="text-xl font-bold tracking-tight text-slate-900">{value}</span>
           <span className="text-[11px] text-slate-400 truncate">{change}</span>

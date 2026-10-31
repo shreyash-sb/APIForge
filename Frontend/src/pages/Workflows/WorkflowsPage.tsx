@@ -13,6 +13,7 @@ import {
   Workflow,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from '@/components/common/ConfirmDialog';
 import { Input } from '@/components/ui/input';
 import { WorkflowStepCard } from '@/components/workflows/WorkflowStepCard';
 import { WorkflowExecutionView } from '@/components/workflows/WorkflowExecutionView';
@@ -41,6 +42,9 @@ export function WorkflowsPage() {
   } = useAppStore();
 
   const [activeTab, setActiveTab] = useState<'editor' | 'results'>('editor');
+  // Inline, dismissible feedback instead of a blocking browser alert() dialog.
+  const [pageError, setPageError] = useState('');
+  const [confirmDeleteWorkflow, setConfirmDeleteWorkflow] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; errors: string[] } | null>(null);
   const [validating, setValidating] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -170,25 +174,46 @@ export function WorkflowsPage() {
         variables: res.resolvedVariables,
       });
       setPreviewModalOpen(true);
+      setPageError('');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Preview failed');
+      setPageError(err instanceof Error ? err.message : 'Preview failed');
     }
   };
 
   return (
     <div className="space-y-6">
+      <ConfirmDialog
+        open={confirmDeleteWorkflow}
+        title="Delete workflow scenario?"
+        message={<><strong className="text-slate-900">{activeWorkflow?.name}</strong> and its {activeWorkflow?.steps.length ?? 0} step(s) will be permanently deleted.</>}
+        confirmLabel="Delete scenario"
+        destructive
+        onCancel={() => setConfirmDeleteWorkflow(false)}
+        onConfirm={() => {
+          setConfirmDeleteWorkflow(false);
+          if (activeWorkflow) deleteWorkflow(activeWorkflow.id);
+        }}
+      />
+      {pageError && (
+        <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-medium text-rose-700">
+          <span>{pageError}</span>
+          <button type="button" className="shrink-0 font-semibold hover:underline" onClick={() => setPageError('')}>
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Unified Workflow Header & Scenario Controls */}
       <section className="panel-surface p-5 sm:p-6 border border-slate-200/80 bg-white space-y-4">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
           <div className="flex items-center gap-3.5">
             <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-violet-100/70 text-violet-700 shadow-sm">
-              <Workflow className="h-5.5 w-5.5" />
+              <Workflow className="h-[22px] w-[22px]" />
             </div>
             <div>
               <div className="flex items-center gap-2.5">
                 <h1 className="text-xl font-bold tracking-tight text-slate-900">API Workflows</h1>
                 <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
-                  {workflows.length} Scenarios
+                  {workflows.length} {workflows.length === 1 ? "scenario" : "scenarios"}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
@@ -201,20 +226,19 @@ export function WorkflowsPage() {
           <div className="flex flex-wrap items-center gap-2.5">
             <Button
               variant="outline"
-              size="sm"
+             
               onClick={handleValidate}
               disabled={validating || !activeWorkflow}
-              className="gap-1.5 text-xs sm:text-sm font-semibold h-9 px-3.5"
+              className="gap-1.5 sm:text-sm font-semibold px-3.5"
             >
               {validating ? <Loader2 className="h-4 w-4 animate-spin" /> : <ShieldCheck className="h-4 w-4" />}
               Validate
             </Button>
 
             <Button
-              size="sm"
               onClick={handleRunWorkflow}
               disabled={workflowExecutionRunning || !activeWorkflow || activeWorkflow.steps.length === 0}
-              className="gap-2 shadow-sm bg-emerald-600 hover:bg-emerald-700 text-white text-xs sm:text-sm font-semibold h-9 px-4"
+              className="gap-2"
             >
               {workflowExecutionRunning ? (
                 <>
@@ -234,7 +258,7 @@ export function WorkflowsPage() {
         {/* Scenario & Target Environment Controls Bar */}
         <div className="flex flex-wrap items-center justify-between gap-3.5 pt-4 border-t border-slate-100">
           <div className="flex flex-wrap items-center gap-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Scenario:</span>
+            <span className="text-xs font-bold text-slate-500">Scenario:</span>
             <select
               value={activeWorkflow?.id}
               onChange={(e) => handleScenarioChange(e.target.value)}
@@ -250,7 +274,7 @@ export function WorkflowsPage() {
               variant="outline"
               size="sm"
               onClick={handleCreateNewWorkflow}
-              className="gap-1.5 text-xs font-semibold h-8.5 px-3"
+              className="gap-1.5 font-semibold px-3"
             >
               <Plus className="h-3.5 w-3.5" /> New Scenario
             </Button>
@@ -258,7 +282,7 @@ export function WorkflowsPage() {
               variant="outline"
               size="sm"
               onClick={() => activeWorkflow && duplicateWorkflow(activeWorkflow.id)}
-              className="gap-1.5 text-xs font-semibold text-slate-600 h-8.5 px-3"
+              className="gap-1.5 font-semibold text-slate-600 px-3"
             >
               <Copy className="h-3.5 w-3.5" /> Duplicate
             </Button>
@@ -266,15 +290,15 @@ export function WorkflowsPage() {
               variant="outline"
               size="sm"
               disabled={workflows.length <= 1}
-              onClick={() => activeWorkflow && deleteWorkflow(activeWorkflow.id)}
-              className="gap-1.5 text-xs font-semibold text-rose-600 border-rose-200 hover:bg-rose-50 h-8.5 px-3"
+              onClick={() => activeWorkflow && setConfirmDeleteWorkflow(true)}
+              className="gap-1.5 font-semibold text-rose-600 border-rose-200 hover:bg-rose-50 px-3"
             >
               <Trash2 className="h-3.5 w-3.5" /> Delete
             </Button>
           </div>
 
           <div className="flex items-center gap-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Target Environment:</span>
+            <span className="text-xs font-bold text-slate-500">Target Environment:</span>
             <select
               value={activeEnvironmentId}
               onChange={(e) => setActiveEnvironmentId(e.target.value)}
@@ -376,7 +400,7 @@ export function WorkflowsPage() {
                 value={activeWorkflow.description || ''}
                 onChange={(e) => updateWorkflow(activeWorkflow.id, { description: e.target.value })}
                 placeholder="Description of this multi-step test scenario"
-                className="text-xs sm:text-sm text-slate-600 max-w-xl h-8.5 bg-white"
+                className="text-xs sm:text-sm text-slate-600 max-w-xl h-8 bg-white"
               />
             </div>
 
@@ -384,7 +408,7 @@ export function WorkflowsPage() {
               <span className="text-xs font-semibold text-slate-500 bg-slate-100 rounded-full px-2.5 py-1">
                 {activeWorkflow.steps.length} / 50 steps
               </span>
-              <Button onClick={handleAddStep} size="sm" className="gap-1.5 shadow-sm h-9 px-3.5 text-xs sm:text-sm font-semibold">
+              <Button onClick={handleAddStep} className="gap-1.5 shadow-sm px-3.5 sm:text-sm font-semibold">
                 <Plus className="h-4 w-4" /> Add Step
               </Button>
             </div>
@@ -449,7 +473,7 @@ export function WorkflowsPage() {
             onClick={() => setPreviewModalOpen(false)}
             aria-label="Close preview overlay"
           />
-          <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 space-y-4">
+          <div className="relative w-full max-w-xl rounded-2xl bg-white p-6 shadow-sheet border border-slate-200 space-y-4">
             <h3 className="text-base font-bold text-slate-900">Request Interpolation Preview</h3>
             <p className="text-xs text-slate-500">
               Resolved safely against the current environment without executing network traffic.

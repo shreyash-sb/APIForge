@@ -2,7 +2,7 @@ import type { ApiSpecification } from './openapi.types.js';
 import type { TestCase, TestCaseType, TestPriority } from './testCase.types.js';
 import type { TestExecutionStatus } from './testExecution.types.js';
 import type { AssertionCategory, ValidationStatus } from './validation.types.js';
-import type { DiagnosisConfidence, DiagnosisSeverity } from './diagnosis.types.js';
+import type { AiProviderName, AiProviderStatus, DiagnosisConfidence, DiagnosisSeverity } from './diagnosis.types.js';
 
 export type ReportTestCaseInput = Pick<TestCase, 'id' | 'name' | 'type' | 'priority' | 'enabled' | 'endpoint'>;
 
@@ -39,6 +39,9 @@ export interface ReportDiagnosisResultInput {
   confidence: DiagnosisConfidence;
   summary: string;
   findings: Array<{ severity: DiagnosisSeverity }>;
+  /** Safe provenance metadata only — never credentials */
+  provider?: AiProviderName;
+  providerStatus?: AiProviderStatus;
 }
 
 export interface GenerateReportRequest {
@@ -128,6 +131,8 @@ export interface FailureBreakdownItem {
   aiDiagnosisSummary?: string;
   aiSeverity?: DiagnosisSeverity;
   aiConfidence?: DiagnosisConfidence;
+  aiProvider?: AiProviderName;
+  aiProviderStatus?: AiProviderStatus;
   diagnosisId?: string;
 }
 

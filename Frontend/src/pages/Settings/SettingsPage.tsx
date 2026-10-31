@@ -3,7 +3,6 @@ import {
   Clock,
   Eye,
   EyeOff,
-  Laptop,
   Loader2,
   Monitor,
   RotateCcw,
@@ -16,7 +15,6 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { LoginActivityItem } from "@/types/auth.types";
 import {
   DEFAULT_REQUEST_TIMEOUT_MS,
   MAX_REQUEST_TIMEOUT_MS,
@@ -25,6 +23,8 @@ import {
 } from "@/store/useAppStore";
 import { useAuthStore } from "@/store/useAuthStore";
 import { authService } from "@/services/authService";
+import { GeminiKeyPanel } from "@/components/settings/GeminiKeyPanel";
+import { ConfirmDialog } from "@/components/common/ConfirmDialog";
 
 export function SettingsPage() {
   const navigate = useNavigate();
@@ -34,32 +34,19 @@ export function SettingsPage() {
 
   // Profile preferences (editable)
   const [name, setName] = useState(currentUser.name);
-  const [email, setEmail] = useState(user?.email || "shri@gmail.com");
-  const [role, setRole] = useState(user?.role || currentUser.role || "engineer");
+  // Email and role belong to the server-side account and are shown read-only.
+  const email = user?.email ?? "";
+  const role = user?.role || currentUser.role || "engineer";
   const [timeout, setTimeoutValue] = useState(String(requestTimeoutMs));
   const [message, setMessage] = useState("");
+  const [confirmReset, setConfirmReset] = useState(false);
 
   // Activity state
   const [isRefreshingActivity, setIsRefreshingActivity] = useState(false);
   const [clearedLocally, setClearedLocally] = useState(false);
 
-  const fallbackActivity: LoginActivityItem[] = [
-    {
-      id: "session-active-1",
-      userEmail: user?.email || email || "shri@gmail.com",
-      timestamp: new Date(2026, 9, 25, 22, 6, 37).toISOString(),
-      ip: "::1",
-      userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      status: "SUCCESS",
-      deviceType: "Desktop (Windows)",
-    },
-  ];
-
-  const displayActivities = clearedLocally
-    ? []
-    : loginActivity && loginActivity.length > 0
-    ? loginActivity
-    : fallbackActivity;
+  // Only real, server-recorded activity is shown; never placeholder sessions.
+  const displayActivities = clearedLocally ? [] : loginActivity ?? [];
 
   const handleRefreshActivity = async () => {
     try {
@@ -139,8 +126,6 @@ export function SettingsPage() {
 
   useEffect(() => {
     setName(currentUser.name);
-    setEmail(user?.email || "shri@gmail.com");
-    setRole(user?.role || currentUser.role || "engineer");
     setTimeoutValue(String(requestTimeoutMs));
   }, [currentUser.name, currentUser.role, user?.email, user?.role, requestTimeoutMs]);
 
@@ -157,31 +142,11 @@ export function SettingsPage() {
     }
 
     const trimmedName = name.trim() || 'Developer';
-    const trimmedEmail = email.trim() || 'developer@apiforge.local';
-    const validRole = role.trim() || 'engineer';
 
+    // Display name and timeout are local preferences; email and role are account data
+    // owned by the server and are never changed from this form.
     setDisplayName(trimmedName);
     setRequestTimeoutMs(numeric);
-
-    // Persist edits to state
-    useAppStore.setState((state) => ({
-      currentUser: {
-        ...state.currentUser,
-        name: trimmedName,
-        role: validRole,
-      },
-    }));
-
-    if (user) {
-      useAuthStore.setState({
-        user: {
-          ...user,
-          name: trimmedName,
-          email: trimmedEmail,
-          role: validRole as any,
-        },
-      });
-    }
 
     setMessage("Settings saved successfully.");
     setTimeout(() => setMessage(""), 3500);
@@ -189,8 +154,6 @@ export function SettingsPage() {
 
   const resetSettings = () => {
     setName(currentUser.name);
-    setEmail(user?.email || "shri@gmail.com");
-    setRole(user?.role || currentUser.role || "engineer");
     setTimeoutValue(String(DEFAULT_REQUEST_TIMEOUT_MS));
     setRequestTimeoutMs(DEFAULT_REQUEST_TIMEOUT_MS);
     setMessage("Settings reset to defaults.");
@@ -262,6 +225,14 @@ export function SettingsPage() {
           </button>
           <button
             type="button"
+            onClick={() => scrollToSection("ai-section")}
+            className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
+            aria-label="AI provider"
+          >
+            AI
+          </button>
+          <button
+            type="button"
             onClick={() => scrollToSection("workspace-section")}
             className="rounded-lg border border-slate-200 bg-white px-2.5 py-1 text-xs font-medium text-slate-700 hover:bg-slate-50 transition-colors"
           >
@@ -290,10 +261,6 @@ export function SettingsPage() {
       <section id="profile-section" className="panel-surface space-y-4 p-4 sm:p-5">
         <div className="flex items-center justify-between">
           <h2 className="text-sm font-bold text-slate-900">Preferences</h2>
-          <div className="flex items-center gap-1.5 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60">
-            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            PBKDF2 + JWT Active
-          </div>
         </div>
 
         <div className="grid gap-3.5 sm:grid-cols-2">
@@ -316,9 +283,10 @@ export function SettingsPage() {
               aria-label="Email address"
               type="email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="h-8 text-xs"
-              placeholder="Email address"
+              readOnly
+              title="Managed by your account"
+              className="h-8 text-xs bg-slate-50 text-slate-500"
+              placeholder="Not signed in"
             />
           </div>
 
@@ -328,9 +296,9 @@ export function SettingsPage() {
               id="role"
               aria-label="Role"
               value={role}
-              onChange={(e) => setRole(e.target.value)}
-              className="h-8 text-xs capitalize"
-              placeholder="e.g. engineer"
+              readOnly
+              title="Assigned by the server; it cannot be changed here"
+              className="h-8 text-xs capitalize bg-slate-50 text-slate-500"
             />
           </div>
 
@@ -361,7 +329,7 @@ export function SettingsPage() {
               variant="outline"
               size="sm"
               onClick={resetSettings}
-              className="h-8 text-xs gap-1.5"
+              className="gap-1.5"
               aria-label="Reset settings"
             >
               <RotateCcw className="h-3 w-3" /> Reset
@@ -370,7 +338,7 @@ export function SettingsPage() {
               type="button"
               size="sm"
               onClick={save}
-              className="h-8 text-xs gap-1.5 font-semibold"
+              className="gap-1.5 font-semibold"
               aria-label="Save settings"
             >
               <Save className="h-3 w-3" /> Save
@@ -378,6 +346,24 @@ export function SettingsPage() {
           </div>
         </div>
       </section>
+
+      <ConfirmDialog
+        open={confirmReset}
+        title="Reset workspace?"
+        message="This clears all loaded specifications, generated test cases, history, and temporary execution results in this browser."
+        confirmLabel="Reset workspace"
+        destructive
+        onCancel={() => setConfirmReset(false)}
+        onConfirm={() => {
+          setConfirmReset(false);
+          resetWorkspace();
+          setMessage("Workspace reset to initial defaults.");
+          setTimeout(() => setMessage(""), 3500);
+        }}
+      />
+
+      {/* ── AI Provider (user-supplied Gemini key, session only) ── */}
+      <GeminiKeyPanel />
 
       {/* ── 2. Workspace Reset ── */}
       <section id="workspace-section" className="panel-surface p-4 sm:p-5">
@@ -393,14 +379,8 @@ export function SettingsPage() {
             variant="outline"
             size="sm"
             aria-label="Reset workspace"
-            onClick={() => {
-              if (window.confirm("Are you sure you want to reset the workspace? This will clear all loaded specifications, generated test cases, history, and temporary execution results.")) {
-                resetWorkspace();
-                setMessage("Workspace reset to initial defaults.");
-                setTimeout(() => setMessage(""), 3500);
-              }
-            }}
-            className="shrink-0 border-rose-300 text-rose-700 hover:bg-rose-50 h-8 text-xs font-semibold gap-1.5"
+            onClick={() => setConfirmReset(true)}
+            className="shrink-0 border-rose-300 text-rose-700 hover:bg-rose-50 font-semibold gap-1.5"
           >
             <RotateCcw className="h-3.5 w-3.5" />
             Reset Workspace
@@ -475,7 +455,7 @@ export function SettingsPage() {
             </p>
           )}
 
-          <Button type="submit" disabled={changingPass} size="sm" className="h-8 text-xs font-semibold gap-1.5" aria-label="Update password">
+          <Button type="submit" disabled={changingPass} size="sm" className="font-semibold gap-1.5" aria-label="Update password">
             {changingPass ? <Loader2 className="h-3 w-3 animate-spin" /> : <Save className="h-3 w-3" />}
             Update
           </Button>
@@ -498,7 +478,7 @@ export function SettingsPage() {
                 setDeleteError("");
                 setShowDeleteModal(true);
               }}
-              className="shrink-0 bg-rose-600 hover:bg-rose-700 text-white h-8 text-xs gap-1.5"
+              className="shrink-0 bg-rose-600 hover:bg-rose-700 text-white gap-1.5"
             >
               <Trash2 className="h-3 w-3" />
               Delete Account
@@ -513,7 +493,7 @@ export function SettingsPage() {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-sm font-bold text-slate-900">Recent Activity</h2>
-              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-600">
+              <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
                 {displayActivities.length} {displayActivities.length === 1 ? "session" : "sessions"}
               </span>
             </div>
@@ -529,7 +509,7 @@ export function SettingsPage() {
               size="sm"
               disabled={isRefreshingActivity}
               onClick={handleRefreshActivity}
-              className="h-8 text-xs gap-1.5 font-medium"
+              className="gap-1.5 font-medium"
               aria-label="Refresh activity"
             >
               <RotateCw className={`h-3 w-3 ${isRefreshingActivity ? "animate-spin" : ""}`} />
@@ -541,7 +521,7 @@ export function SettingsPage() {
                 variant="outline"
                 size="sm"
                 onClick={handleClearActivity}
-                className="h-8 text-xs gap-1.5 text-slate-600 hover:text-rose-600 hover:border-rose-200"
+                className="gap-1.5 text-slate-600 hover:text-rose-600 hover:border-rose-200"
                 aria-label="Clear activity"
               >
                 <Trash2 className="h-3 w-3" />
@@ -561,7 +541,7 @@ export function SettingsPage() {
               variant="outline"
               size="sm"
               onClick={handleRefreshActivity}
-              className="mt-3 h-7 text-xs gap-1 font-medium"
+              className="mt-3 gap-1 font-medium"
             >
               <RotateCw className="h-3 w-3" />
               Refresh
@@ -587,7 +567,7 @@ export function SettingsPage() {
                       <td className="px-3.5 py-2.5 font-medium whitespace-nowrap">
                         {isSuccess ? (
                           <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-700 border border-emerald-200/60">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
                             Success
                           </span>
                         ) : isLocked ? (
@@ -617,7 +597,7 @@ export function SettingsPage() {
                           )}
                           <span className="font-medium text-slate-800">{act.deviceType}</span>
                           {isCurrent && (
-                            <span className="rounded bg-sky-50 px-1.5 py-0.2 text-[10px] font-semibold text-sky-700 border border-sky-200/70">
+                            <span className="rounded bg-sky-50 px-1.5 py-0.2 text-[11px] font-semibold text-sky-700 border border-sky-200/70">
                               Active
                             </span>
                           )}
@@ -635,7 +615,7 @@ export function SettingsPage() {
       {/* Account Deletion Confirmation Modal */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-xs p-4">
-          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-2xl space-y-3">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-sheet space-y-3">
             <div className="flex items-center gap-2 text-rose-600">
               <AlertTriangle className="h-5 w-5" />
               <h3 className="text-base font-bold text-slate-900">Delete Account Permanently</h3>
@@ -676,7 +656,7 @@ export function SettingsPage() {
                 size="sm"
                 disabled={isDeletingAccount}
                 onClick={() => setShowDeleteModal(false)}
-                className="h-8 text-xs"
+               
               >
                 Cancel
               </Button>
@@ -687,7 +667,7 @@ export function SettingsPage() {
                 aria-label="Permanently Delete"
                 disabled={deleteConfirmationText !== "DELETE" || isDeletingAccount}
                 onClick={handleDeleteAccount}
-                className="bg-rose-600 hover:bg-rose-700 h-8 text-xs"
+                className="bg-rose-600 hover:bg-rose-700"
               >
                 {isDeletingAccount ? (
                   <>

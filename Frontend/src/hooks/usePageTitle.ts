@@ -38,6 +38,10 @@ const routeTitles: Record<string, { title: string; description: string }> = {
     title: "Response Validation",
     description: "Verify schemas, contracts, and response expectations.",
   },
+  "/reports": {
+    title: "Reports & Analytics",
+    description: "Current-run execution, validation, and AI diagnosis analytics.",
+  },
   "/ai-assistant": {
     title: "AI Assistant",
     description: "Use AI workflows for debugging, payloads, and insights.",

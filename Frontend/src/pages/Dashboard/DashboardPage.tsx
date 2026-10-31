@@ -1,10 +1,8 @@
 import {
   ArrowRight,
-  CheckCircle2,
   Database,
   Loader2,
   RefreshCw,
-  ShieldAlert,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
@@ -15,12 +13,10 @@ import { CollectionCard } from "@/components/dashboard/CollectionCard";
 import { RequestTable } from "@/components/dashboard/RequestTable";
 import { StatCard } from "@/components/dashboard/StatCard";
 import { SectionHeader } from "@/components/common/SectionHeader";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { useAppStore } from "@/store/useAppStore";
 import { getActivity, getDashboardStats, getExecutionEvents, getRecentRequests } from "@/lib/dashboardData";
 import { checkBackendHealth, type HealthCheck } from "@/services/healthService";
-import { approveAgentStep, rejectAgentStep, listAgentTasks } from "@/services/agentService";
-import type { AgentTask } from "@/types/agent.types";
 
 export function DashboardPage() {
   const {
@@ -31,8 +27,6 @@ export function DashboardPage() {
     workflowExecutionResult,
     manualRequestExecutions,
     collections,
-    agentTasks,
-    setAgentTasks,
     environments,
     activeEnvironmentId,
   } = useAppStore();
@@ -42,8 +36,6 @@ export function DashboardPage() {
 
   const [health, setHealth] = useState<HealthCheck | null>(null);
   const [healthLoading, setHealthLoading] = useState(true);
-  const [pendingApprovalTask, setPendingApprovalTask] = useState<AgentTask | null>(null);
-  const [approving, setApproving] = useState(false);
 
   const refreshHealth = async () => {
     setHealthLoading(true);
@@ -53,47 +45,12 @@ export function DashboardPage() {
 
   useEffect(() => {
     void refreshHealth();
-    // Load active agent tasks to monitor approvals
-    void listAgentTasks()
-      .then((tasks) => {
-        setAgentTasks(tasks);
-        const waiting = tasks.find((t) => t.status === "WAITING_FOR_APPROVAL");
-        setPendingApprovalTask(waiting ?? null);
-      })
-      .catch(() => {
-        // Fallback gracefully if agent backend is offline
-      });
-  }, [setAgentTasks]);
+  }, []);
 
   const events = getExecutionEvents(executionResults, workflowExecutionResult, manualRequestExecutions);
   const liveStats = getDashboardStats(executionResults, validationResults, diagnosisResults);
   const activity = getActivity(events);
   const recentRequests = getRecentRequests(events);
-
-  const handleApproveStep = async (taskId: string, stepId: string) => {
-    try {
-      setApproving(true);
-      const updated = await approveAgentStep(taskId, stepId);
-      const remaining = agentTasks.map((t) => (t.taskId === taskId ? updated : t));
-      setAgentTasks(remaining);
-      const waiting = remaining.find((t) => t.status === "WAITING_FOR_APPROVAL");
-      setPendingApprovalTask(waiting ?? null);
-    } finally {
-      setApproving(false);
-    }
-  };
-
-  const handleRejectStep = async (taskId: string, stepId: string) => {
-    try {
-      setApproving(true);
-      const updated = await rejectAgentStep(taskId, stepId, "Rejected from dashboard control center");
-      const remaining = agentTasks.map((t) => (t.taskId === taskId ? updated : t));
-      setAgentTasks(remaining);
-      setPendingApprovalTask(null);
-    } finally {
-      setApproving(false);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -117,7 +74,7 @@ export function DashboardPage() {
               <span className="hidden sm:inline font-mono text-[11px] text-slate-400 max-w-[160px] truncate">
                 {activeEnv?.baseUrl || "No base URL"}
               </span>
-              <span className="rounded bg-slate-200/80 px-1.5 py-0.2 text-[10px] font-bold text-slate-600">
+              <span className="rounded bg-slate-200/80 px-1.5 py-0.2 text-[11px] font-bold text-slate-600">
                 {activeVarsCount}v
               </span>
               <Link
@@ -160,65 +117,6 @@ export function DashboardPage() {
           <StatCard key={stat.title} {...stat} />
         ))}
       </section>
-
-      {/* ── 3. Prominent Human-in-the-Loop Authorization Alert (Shown only when pending) ── */}
-      {pendingApprovalTask && (
-        <section className="rounded-xl border-2 border-amber-300 bg-amber-50/90 p-4.5 shadow-sm animate-in fade-in duration-200">
-          <div className="flex flex-col gap-3.5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex items-start gap-3">
-              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-white shadow-sm">
-                <ShieldAlert className="h-4.5 w-4.5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <span className="rounded bg-amber-200 px-2 py-0.5 text-[10px] font-bold uppercase text-amber-900">
-                    Human Authorization Required
-                  </span>
-                  <span className="text-xs text-amber-700 font-medium font-mono">#{pendingApprovalTask.taskId.slice(-6)}</span>
-                </div>
-                <h4 className="mt-1 text-sm font-bold text-slate-900">
-                  Step requires approval: {pendingApprovalTask.steps[pendingApprovalTask.currentStepIndex]?.tool || "Sensitive Network Execution"}
-                </h4>
-                <p className="text-xs text-slate-600 mt-0.5 max-w-xl">
-                  {pendingApprovalTask.steps[pendingApprovalTask.currentStepIndex]?.summary ||
-                    "An outbound HTTP network operation or code patch was proposed. Per security policy, human confirmation is required."}
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={approving}
-                onClick={() =>
-                  handleRejectStep(
-                    pendingApprovalTask.taskId,
-                    pendingApprovalTask.steps[pendingApprovalTask.currentStepIndex]?.stepId
-                  )
-                }
-                className="border-slate-300 text-slate-700 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-300 font-semibold text-xs"
-              >
-                Reject
-              </Button>
-              <Button
-                size="sm"
-                disabled={approving}
-                onClick={() =>
-                  handleApproveStep(
-                    pendingApprovalTask.taskId,
-                    pendingApprovalTask.steps[pendingApprovalTask.currentStepIndex]?.stepId
-                  )
-                }
-                className="bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs gap-1.5 shadow-sm"
-              >
-                {approving ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />}
-                Authorize &amp; Execute
-              </Button>
-            </div>
-          </div>
-        </section>
-      )}
 
       {/* ── 4. Telemetry: Activity Chart & Backend Health ── */}
       <section className="grid gap-5 lg:grid-cols-3">

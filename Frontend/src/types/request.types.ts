@@ -62,7 +62,7 @@ export interface ApiResponse {
 export interface ApiErrorResponse {
   success: false;
   error: {
-    type: 'VALIDATION_ERROR' | 'NETWORK_ERROR' | 'TIMEOUT' | 'INVALID_URL' | 'OUTBOUND_POLICY' | 'UNKNOWN_ERROR';
+    type: 'VALIDATION_ERROR' | 'NETWORK_ERROR' | 'TIMEOUT' | 'INVALID_URL' | 'OUTBOUND_POLICY' | 'AUTH_ERROR' | 'UNKNOWN_ERROR';
     message: string;
     details?: string;
   };

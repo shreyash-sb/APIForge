@@ -3,6 +3,9 @@ import { MockServerService, mockServerService as defaultMockServerService } from
 import type { ApiSpecification } from '../types/openapi.types.js';
 import type { MockGenerateOptions, MockRoute } from '../types/mockServer.types.js';
 
+const MOCK_METHODS = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'HEAD', 'OPTIONS'];
+const MAX_MOCK_DELAY_MS = 30_000;
+
 export class MockServerController {
   private readonly mockService: MockServerService;
 
@@ -10,12 +13,18 @@ export class MockServerController {
     this.mockService = mockService;
   }
 
+  private authenticatedUserId(res: Response): string {
+    const userId = res.locals.authUser?.id;
+    if (typeof userId !== 'string' || !userId) throw new Error('Authenticated user context is missing.');
+    return userId;
+  }
+
   /**
    * GET /api/mock/routes - List all mock routes
    */
   async getRoutes(_req: Request, res: Response): Promise<void> {
     try {
-      const routes = this.mockService.getRoutes();
+      const routes = this.mockService.getRoutes(this.authenticatedUserId(res));
       res.status(200).json({ routes, total: routes.length });
     } catch {
       res.status(500).json({ error: { message: 'Failed to retrieve mock routes.' } });
@@ -27,15 +36,42 @@ export class MockServerController {
    */
   async getRouteById(req: Request, res: Response): Promise<void> {
     try {
-      const route = this.mockService.getRouteById(req.params.id);
+      const route = this.mockService.getRouteById(req.params.id, this.authenticatedUserId(res));
       if (!route) {
-        res.status(404).json({ error: { message: `Mock route '${req.params.id}' not found.` } });
+        res.status(404).json({ error: { message: 'Mock route not found.' } });
         return;
       }
       res.status(200).json(route);
     } catch {
       res.status(500).json({ error: { message: 'Failed to retrieve mock route.' } });
     }
+  }
+
+  /**
+   * Validates user-editable route fields. Returns a user-facing message or undefined.
+   * Bounds keep a single route from producing invalid HTTP or tying up /serve.
+   */
+  private validateRouteInput(input: Record<string, unknown>, isCreate: boolean): string | undefined {
+    const has = (key: string) => input[key] !== undefined;
+    if (isCreate || has('name')) {
+      if (typeof input.name !== 'string' || !input.name.trim() || input.name.length > 120) return 'name must be a non-empty string of at most 120 characters.';
+    }
+    if (isCreate || has('method')) {
+      if (typeof input.method !== 'string' || !MOCK_METHODS.includes(input.method.toUpperCase())) return `method must be one of ${MOCK_METHODS.join(', ')}.`;
+    }
+    if (isCreate || has('path')) {
+      if (typeof input.path !== 'string' || !input.path.trim() || input.path.length > 500) return 'path must be a non-empty string of at most 500 characters.';
+    }
+    if (has('statusCode')) {
+      const code = Number(input.statusCode);
+      if (!Number.isInteger(code) || code < 100 || code > 599) return 'statusCode must be an integer between 100 and 599.';
+    }
+    if (has('delayMs')) {
+      const delay = Number(input.delayMs);
+      if (!Number.isFinite(delay) || delay < 0 || delay > MAX_MOCK_DELAY_MS) return `delayMs must be between 0 and ${MAX_MOCK_DELAY_MS}.`;
+    }
+    if (has('headers') && (typeof input.headers !== 'object' || input.headers === null || Array.isArray(input.headers))) return 'headers must be an object of header names to values.';
+    return undefined;
   }
 
   /**
@@ -51,12 +87,18 @@ export class MockServerController {
         });
         return;
       }
+      const invalid = this.validateRouteInput(req.body, true);
+      if (invalid) {
+        res.status(400).json({ error: { message: `Invalid payload: ${invalid}` } });
+        return;
+      }
 
       const newRoute = this.mockService.createRoute({
+        ownerUserId: this.authenticatedUserId(res),
         name,
-        method,
+        method: String(method).toUpperCase() as MockRoute['method'],
         path,
-        statusCode: Number(statusCode) || 200,
+        statusCode: statusCode === undefined ? 200 : Number(statusCode),
         body: body !== undefined ? body : {},
         headers: headers || { 'Content-Type': 'application/json' },
         delayMs: Number(delayMs) || 0,
@@ -77,9 +119,23 @@ export class MockServerController {
    */
   async updateRoute(req: Request, res: Response): Promise<void> {
     try {
-      const updated = this.mockService.updateRoute(req.params.id, req.body as Partial<MockRoute>);
+      const body = (req.body ?? {}) as Record<string, unknown>;
+      const invalid = this.validateRouteInput(body, false);
+      if (invalid) {
+        res.status(400).json({ error: { message: `Invalid payload: ${invalid}` } });
+        return;
+      }
+      // Only user-editable fields; identity, ownership, source, and timestamps are server-controlled.
+      const updates: Partial<MockRoute> = {};
+      for (const key of ['name', 'description', 'path', 'body', 'headers', 'enabled', 'tags', 'contentType'] as const) {
+        if (body[key] !== undefined) (updates as Record<string, unknown>)[key] = body[key];
+      }
+      if (body.method !== undefined) updates.method = String(body.method).toUpperCase() as MockRoute['method'];
+      if (body.statusCode !== undefined) updates.statusCode = Number(body.statusCode);
+      if (body.delayMs !== undefined) updates.delayMs = Number(body.delayMs);
+      const updated = this.mockService.updateRoute(req.params.id, updates, this.authenticatedUserId(res));
       if (!updated) {
-        res.status(404).json({ error: { message: `Mock route '${req.params.id}' not found.` } });
+        res.status(404).json({ error: { message: 'Mock route not found.' } });
         return;
       }
       res.status(200).json(updated);
@@ -93,9 +149,9 @@ export class MockServerController {
    */
   async deleteRoute(req: Request, res: Response): Promise<void> {
     try {
-      const deleted = this.mockService.deleteRoute(req.params.id);
+      const deleted = this.mockService.deleteRoute(req.params.id, this.authenticatedUserId(res));
       if (!deleted) {
-        res.status(404).json({ error: { message: `Mock route '${req.params.id}' not found.` } });
+        res.status(404).json({ error: { message: 'Mock route not found.' } });
         return;
       }
       res.status(200).json({ success: true, message: `Mock route '${req.params.id}' deleted.` });
@@ -119,7 +175,7 @@ export class MockServerController {
         return;
       }
 
-      const result = this.mockService.generateFromSpec(specification, options);
+      const result = this.mockService.generateFromSpec(specification, options, this.authenticatedUserId(res));
       res.status(200).json(result);
     } catch {
       res.status(500).json({ error: { message: 'Failed to generate mock routes from specification.' } });
@@ -131,7 +187,7 @@ export class MockServerController {
    */
   async getLogs(_req: Request, res: Response): Promise<void> {
     try {
-      const logs = this.mockService.getLogs();
+      const logs = this.mockService.getLogs(this.authenticatedUserId(res));
       res.status(200).json({ logs, total: logs.length });
     } catch {
       res.status(500).json({ error: { message: 'Failed to retrieve mock logs.' } });
@@ -143,7 +199,7 @@ export class MockServerController {
    */
   async clearLogs(_req: Request, res: Response): Promise<void> {
     try {
-      this.mockService.clearLogs();
+      this.mockService.clearLogs(this.authenticatedUserId(res));
       res.status(200).json({ success: true, message: 'Mock logs cleared.' });
     } catch {
       res.status(500).json({ error: { message: 'Failed to clear mock logs.' } });

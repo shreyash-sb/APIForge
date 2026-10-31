@@ -7,7 +7,7 @@ export function CollectionCard({ name, requests, updatedAt, accent, to }: Collec
   const content = (
     <div className="panel-surface flex items-center gap-3.5 p-3.5 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-sm">
       <div className={`rounded-xl p-2.5 shrink-0 ${accent}`}>
-        <FolderKanban className="h-4.5 w-4.5" />
+        <FolderKanban className="h-[18px] w-[18px]" />
       </div>
       <div className="min-w-0 flex-1">
         <p className="truncate font-semibold text-sm text-slate-900">{name}</p>

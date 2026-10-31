@@ -21,3 +21,63 @@ export const apiRateLimiter = rateLimit({
     });
   },
 });
+
+/** Keys AI limits by the authenticated user (set by requireAuth), falling back to the client IP. */
+const aiUserKey = (req: Request, res: Response): string => {
+  const userId = (res.locals as { authUser?: { id?: string } }).authUser?.id;
+  return userId ? `user:${userId}` : ipKeyGenerator(req.ip || req.socket.remoteAddress || '127.0.0.1');
+};
+
+const aiLimitHandler = (message: string) => (_req: Request, res: Response) => {
+  res.status(429).json({ error: { code: 'AI_RATE_LIMIT_EXCEEDED', message } });
+};
+
+/** Per-user cap on AI assistant/diagnosis calls so one account cannot exhaust the backend or its own key. */
+export const aiRequestRateLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  limit: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: aiUserKey,
+  handler: aiLimitHandler('Too many AI requests. Please wait a minute before retrying.'),
+});
+
+/** Tighter cap on saving/testing Gemini keys (each test makes an outbound Google request). */
+export const aiKeyRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: aiUserKey,
+  handler: aiLimitHandler('Too many Gemini key changes or tests. Please wait before trying again.'),
+});
+
+const envLimit = (name: string, fallback: number): number => {
+  const value = Number(process.env[name]);
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+};
+
+const authLimitHandler = (message: string) => (_req: Request, res: Response) => {
+  res.status(429).json({ success: false, error: message });
+};
+
+/**
+ * Per-IP cap on sign-in attempts. Complements the per-(email, IP) lockout in AuthService:
+ * stops one client from spraying passwords across many accounts.
+ */
+export const authLoginRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: envLimit('AUTH_LOGIN_RATE_LIMIT', 30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: authLimitHandler('Too many sign-in attempts from this network. Please wait 15 minutes and try again.'),
+});
+
+/** Per-IP cap on account creation to slow automated sign-ups. */
+export const authSignupRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  limit: envLimit('AUTH_SIGNUP_RATE_LIMIT', 20),
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: authLimitHandler('Too many accounts created from this network. Please try again later.'),
+});

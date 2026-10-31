@@ -83,7 +83,7 @@ export function JsonGeneratorPage() {
 
           {specification && schemas.length > 0 && (
             <div className="flex items-center gap-2">
-              <label htmlFor="openapi-schema-select" className="text-xs font-bold uppercase tracking-wider text-slate-500">
+              <label htmlFor="openapi-schema-select" className="text-xs font-bold text-slate-500">
                 OpenAPI Schema:
               </label>
               <select
@@ -118,7 +118,7 @@ export function JsonGeneratorPage() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Code className="h-4 w-4 text-slate-400" />
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-600">JSON Payload Editor</span>
+            <span className="text-xs font-bold text-slate-600">JSON Payload Editor</span>
           </div>
 
           {/* Action Toolbar */}

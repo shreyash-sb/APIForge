@@ -236,7 +236,7 @@ export function TestGeneratorPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button onClick={generate} disabled={loading || executing} size="sm" className="h-8.5 text-xs font-medium gap-1.5">
+            <Button onClick={generate} disabled={loading || executing} size="sm" className="font-medium gap-1.5">
               {loading ? (
                 <>
                   <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -253,7 +253,7 @@ export function TestGeneratorPage() {
               <Button
                 variant="default"
                 size="sm"
-                className="h-8.5 text-xs font-medium gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
+                className="font-medium gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white"
                 onClick={executeAllTests}
                 disabled={executing || loading}
               >
@@ -272,7 +272,7 @@ export function TestGeneratorPage() {
             )}
             {executedCount > 0 && (
               <Link to="/response-validation">
-                <Button variant="outline" size="sm" className="h-8.5 text-xs font-medium gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50">
+                <Button variant="outline" size="sm" className="font-medium gap-1.5 border-violet-300 text-violet-700 hover:bg-violet-50">
                   <Activity className="h-3.5 w-3.5" />
                   Validate ({executedCount})
                 </Button>
@@ -412,7 +412,7 @@ export function TestGeneratorPage() {
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="bg-slate-50 text-[11px] uppercase tracking-wider text-slate-400">
+                <thead className="bg-slate-50 text-[11px] text-slate-400">
                   <tr>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-3 py-3">Type</th>
@@ -439,7 +439,7 @@ export function TestGeneratorPage() {
                           {test.name}
                         </td>
                         <td className="px-3 py-3 whitespace-nowrap">
-                          <span className={`rounded px-1.5 py-0.5 text-[10px] font-bold ${typeStyle[test.type]}`}>
+                          <span className={`rounded px-1.5 py-0.5 text-[11px] font-bold ${typeStyle[test.type]}`}>
                             {test.type}
                           </span>
                         </td>
@@ -752,7 +752,7 @@ function Detail({
                       HTTP {executionResult.response.status} {executionResult.response.statusText}
                     </span>
                     {executionResult.response.size !== undefined && (
-                      <div className="text-[10px] text-slate-400 mt-0.5">
+                      <div className="text-[11px] text-slate-400 mt-0.5">
                         Size: {executionResult.response.size} B
                       </div>
                     )}

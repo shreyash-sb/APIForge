@@ -88,6 +88,10 @@ export function parseCurlCommand(rawCommand: string): ParsedCurl {
           enabled: true,
         });
       });
+      // The query now lives in queryParams; keeping it in the URL too would send every
+      // parameter twice (the executor appends queryParams to the URL).
+      parsedUrl.search = '';
+      url = parsedUrl.toString();
     } catch {
       // Keep URL as-is if URL constructor fails
     }

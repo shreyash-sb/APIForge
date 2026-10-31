@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
+import { screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { LoginPage } from '@/pages/Auth/LoginPage';
 import { SignUpPage } from '@/pages/Auth/SignUpPage';

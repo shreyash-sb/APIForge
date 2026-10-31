@@ -1,8 +1,24 @@
 import { Router } from 'express';
 import { MockServerController } from '../controllers/mockServer.controller.js';
+import { requireAuth } from '../middleware/requireAuth.js';
+import { mockServerService } from '../services/mockServer.service.js';
+import type { MockServerService } from '../services/mockServer.service.js';
 
+export function createMockServerRouter(service: MockServerService = mockServerService): Router {
 const router = Router();
-const controller = new MockServerController();
+const controller = new MockServerController(service);
+
+// Serving configured mocks is intentionally public so they can model public APIs.
+router.all('/serve/*', (req, res) => {
+  void controller.serveMock(req, res);
+});
+
+router.all('/serve', (req, res) => {
+  void controller.serveMock(req, res);
+});
+
+// Configuration and logs can expose or alter workspace data; protect them.
+router.use(requireAuth);
 
 // Management endpoints
 router.get('/routes', (req, res) => {
@@ -37,13 +53,7 @@ router.delete('/logs', (req, res) => {
   void controller.clearLogs(req, res);
 });
 
-// Dynamic mock server request dispatcher
-router.all('/serve/*', (req, res) => {
-  void controller.serveMock(req, res);
-});
+  return router;
+}
 
-router.all('/serve', (req, res) => {
-  void controller.serveMock(req, res);
-});
-
-export default router;
+export default createMockServerRouter();

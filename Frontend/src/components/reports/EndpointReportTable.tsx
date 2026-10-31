@@ -5,7 +5,7 @@ export function EndpointReportTable({ endpoints }: { endpoints: EndpointReportIt
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[760px] text-left text-sm">
-        <thead className="border-b border-slate-200 bg-slate-50/50 text-xs uppercase tracking-wider text-slate-500">
+        <thead className="border-b border-slate-200 bg-slate-50/50 text-xs text-slate-500">
           <tr>
             <th className="px-4 py-3 font-medium">Method</th>
             <th className="px-4 py-3 font-medium">Endpoint</th>

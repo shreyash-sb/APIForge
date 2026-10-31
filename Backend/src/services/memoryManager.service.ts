@@ -49,15 +49,11 @@ export class ConversationMemoryManager {
     }
 
     // Condense older messages into a summary prompt
-    let summaryContent = '';
-    if (summarizerFn) {
-      summaryContent = await summarizerFn(olderMessages);
-    } else {
-      // Deterministic fallback summary without LLM roundtrip
-      summaryContent = olderMessages
+    const summaryContent = summarizerFn
+      ? await summarizerFn(olderMessages)
+      : olderMessages
         .map((m) => `[${m.role.toUpperCase()}]: ${m.content.slice(0, 100)}...`)
         .join(' | ');
-    }
 
     const summaryMessage: ChatMessage = {
       role: 'system',

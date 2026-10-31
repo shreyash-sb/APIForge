@@ -1,4 +1,5 @@
 import type { AssertionCategory } from '../types/validation.types.js';
+import { redactSecrets } from '../utils/secretRedaction.js';
 import type {
   EndpointReportItem,
   FailureBreakdownItem,
@@ -14,6 +15,8 @@ const severities = ['CRITICAL', 'ERROR', 'WARNING', 'INFO'] as const;
 const confidences = ['HIGH', 'MEDIUM', 'LOW'] as const;
 const executionStatuses = ['PENDING', 'RUNNING', 'PASSED_EXECUTION', 'FAILED_EXECUTION', 'ERROR', 'SKIPPED'] as const;
 const validationStatuses = ['VALIDATION_PASSED', 'VALIDATION_FAILED', 'NOT_VALIDATABLE', 'SKIPPED'] as const;
+const providerNames = ['google-gemini', 'mock'] as const;
+const providerStatuses = ['live', 'mock', 'fallback'] as const;
 
 export class ReportValidationError extends Error {}
 
@@ -28,7 +31,7 @@ const safeTarget = (value?: string): string | undefined => {
   } catch { return undefined; }
 };
 
-const sanitizeText = (value?: string): string | undefined => value?.replace(
+const sanitizeText = (value?: string): string | undefined => value === undefined ? undefined : redactSecrets(String(value)).replace(
   /(authorization|api[-_ ]?key|password|cookie|secret|token)\s*[:=]\s*(bearer\s+)?[^\s,;]+|bearer\s+[\w.-]+|:\/\/[^\s/@:]+:[^\s/@]+@/gi,
   '[REDACTED]'
 );
@@ -116,7 +119,8 @@ export class ReportService {
           failedAssertionCount: failedAssertions.length, failedAssertionCategories: [...new Set(failedAssertions.map((a) => a.category))],
           failedAssertionPaths: failedAssertions.map((a) => a.path),
           message: sanitizeText(first?.message ?? executionResult?.errorMessage), expected: sanitizeText(first?.expected), actual: sanitizeText(first?.actual), aiDiagnosisSummary: sanitizeText(diagnosisResult?.summary),
-          aiSeverity: highestSeverity, aiConfidence: diagnosisResult?.confidence, diagnosisId: diagnosisResult?.diagnosisId });
+          aiSeverity: highestSeverity, aiConfidence: diagnosisResult?.confidence,
+          aiProvider: diagnosisResult?.provider, aiProviderStatus: diagnosisResult?.providerStatus, diagnosisId: diagnosisResult?.diagnosisId });
       }
     }
     execution.averageDurationMs = execution.executedTests ? Number((totalExecutionDuration / execution.executedTests).toFixed(2)) : 0;
@@ -158,7 +162,9 @@ export class ReportService {
     }
     for (const item of input.diagnosisResults ?? []) {
       const execution = executions.get(item.testCaseId);
-      if (!execution || execution.executionId !== item.executionId || !item.diagnosisId || !confidences.includes(item.confidence) || !Array.isArray(item.findings) || item.findings.some((finding) => !severities.includes(finding.severity))) throw new ReportValidationError('Every diagnosis result must reference its matching execution result and contain valid AI metrics.');
+      if (!execution || execution.executionId !== item.executionId || !item.diagnosisId || !confidences.includes(item.confidence) || !Array.isArray(item.findings) || item.findings.some((finding) => !severities.includes(finding.severity))
+      || (item.provider !== undefined && !providerNames.includes(item.provider))
+      || (item.providerStatus !== undefined && !providerStatuses.includes(item.providerStatus))) throw new ReportValidationError('Every diagnosis result must reference its matching execution result and contain valid AI metrics.');
     }
   }
 }

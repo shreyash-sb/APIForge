@@ -8,6 +8,13 @@ import type { TestCaseValidationResult } from './validation.types.js';
 
 export type AiProviderName = 'google-gemini' | 'mock';
 
+/**
+ * live     — the answer was produced by Gemini using the user's own key
+ * mock     — demo mode (no user key configured); deterministic, not a live LLM
+ * fallback — Gemini was attempted but failed; deterministic output was used instead
+ */
+export type AiProviderStatus = 'live' | 'mock' | 'fallback';
+
 // ---------------------------------------------------------------------------
 // Sanitized evidence passed into the AI (no secrets / tokens)
 // ---------------------------------------------------------------------------
@@ -97,7 +104,12 @@ export interface DiagnosisResult {
   executionId: string;
   diagnosedAt: string;
   durationMs: number;
+  /** The provider that actually produced this content (mock for demo or fallback output) */
   provider: AiProviderName;
+  /** Whether the content is live Gemini output, demo/mock output, or a deterministic fallback */
+  providerStatus?: AiProviderStatus;
+  /** Classified reason Gemini output was not used (fallback only); never includes credentials */
+  fallbackReason?: string;
   /** Phase 6 validation status — NOT overridden by AI */
   validationStatus: string;
   confidence: DiagnosisConfidence;
@@ -136,6 +148,14 @@ export interface DiagnoseBatchResult {
   diagnosedAt: string;
   totalDurationMs: number;
   results: DiagnosisResult[];
+  /** Items that could not be diagnosed; successful results are still returned */
+  failures?: DiagnoseBatchFailure[];
+}
+
+export interface DiagnoseBatchFailure {
+  testCaseId: string;
+  executionId: string;
+  message: string;
 }
 
 export const MAX_DIAGNOSIS_BATCH_SIZE = 20;

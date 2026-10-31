@@ -106,19 +106,19 @@ export function WorkflowExecutionView({ result }: WorkflowExecutionViewProps) {
           <div className="flex items-center gap-4 text-center text-xs">
             <div className="rounded-xl border border-slate-200/80 bg-white/90 px-3 py-2 shadow-sm">
               <p className="font-bold text-slate-900">{result.summary.totalSteps}</p>
-              <p className="text-[10px] text-slate-500 uppercase">Steps</p>
+              <p className="text-[11px] text-slate-500">Steps</p>
             </div>
             <div className="rounded-xl border border-emerald-200 bg-emerald-50/80 px-3 py-2 shadow-sm">
               <p className="font-bold text-emerald-700">{result.summary.passed}</p>
-              <p className="text-[10px] text-emerald-600 uppercase">Passed</p>
+              <p className="text-[11px] text-emerald-600">Passed</p>
             </div>
             <div className="rounded-xl border border-rose-200 bg-rose-50/80 px-3 py-2 shadow-sm">
               <p className="font-bold text-rose-700">{result.summary.failed}</p>
-              <p className="text-[10px] text-rose-600 uppercase">Failed</p>
+              <p className="text-[11px] text-rose-600">Failed</p>
             </div>
             <div className="rounded-xl border border-amber-200 bg-amber-50/80 px-3 py-2 shadow-sm">
               <p className="font-bold text-amber-700">{result.summary.skipped + result.summary.blocked}</p>
-              <p className="text-[10px] text-amber-600 uppercase">Skipped</p>
+              <p className="text-[11px] text-amber-600">Skipped</p>
             </div>
           </div>
         </div>
@@ -127,7 +127,7 @@ export function WorkflowExecutionView({ result }: WorkflowExecutionViewProps) {
       {/* Extracted Runtime Context Summary */}
       {Object.keys(result.finalContext || {}).length > 0 && (
         <section className="panel-surface p-4">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+          <h3 className="text-xs font-semibold text-slate-500 mb-3">
             Final Runtime Context &amp; Extracted Variables
           </h3>
           <div className="flex flex-wrap gap-2">

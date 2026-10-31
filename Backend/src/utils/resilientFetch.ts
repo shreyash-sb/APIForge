@@ -38,7 +38,7 @@ export async function resilientFetch(
       attempt++;
 
       if (attempt > maxRetries) {
-        throw new Error(`resilientFetch failed after ${maxRetries} retries: ${(err as Error).message}`);
+        throw new Error(`resilientFetch failed after ${maxRetries} retries: ${(err as Error).message}`, { cause: err });
       }
 
       // Exponential backoff with random jitter (delay = base * 2^(attempt-1) + jitter)

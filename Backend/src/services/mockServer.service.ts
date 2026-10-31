@@ -120,15 +120,16 @@ export class MockServerService {
   /**
    * Returns all registered mock routes
    */
-  getRoutes(): MockRoute[] {
-    return Array.from(this.routes.values());
+  getRoutes(ownerUserId: string): MockRoute[] {
+    return Array.from(this.routes.values()).filter((route) => route.ownerUserId === ownerUserId);
   }
 
   /**
    * Retrieves a single mock route by its ID
    */
-  getRouteById(id: string): MockRoute | undefined {
-    return this.routes.get(id);
+  getRouteById(id: string, ownerUserId: string): MockRoute | undefined {
+    const route = this.routes.get(id);
+    return route?.ownerUserId === ownerUserId ? route : undefined;
   }
 
   /**
@@ -157,15 +158,16 @@ export class MockServerService {
   /**
    * Updates an existing mock route
    */
-  updateRoute(id: string, updates: Partial<MockRoute>): MockRoute | undefined {
+  updateRoute(id: string, updates: Partial<MockRoute>, ownerUserId: string): MockRoute | undefined {
     const existing = this.routes.get(id);
-    if (!existing) return undefined;
+    if (!existing || existing.ownerUserId !== ownerUserId) return undefined;
 
     const cleanPath = updates.path !== undefined ? this.normalizePath(updates.path) : existing.path;
     const updated: MockRoute = {
       ...existing,
       ...updates,
       id,
+      ownerUserId: existing.ownerUserId,
       path: cleanPath,
       updatedAt: new Date().toISOString(),
       delayMs: updates.delayMs !== undefined ? Math.max(0, Number(updates.delayMs) || 0) : existing.delayMs,
@@ -178,7 +180,9 @@ export class MockServerService {
   /**
    * Deletes a mock route by ID
    */
-  deleteRoute(id: string): boolean {
+  deleteRoute(id: string, ownerUserId: string): boolean {
+    const existing = this.routes.get(id);
+    if (!existing || existing.ownerUserId !== ownerUserId) return false;
     return this.routes.delete(id);
   }
 
@@ -195,9 +199,9 @@ export class MockServerService {
   /**
    * Auto-generates mock routes from an imported OpenAPI Specification
    */
-  generateFromSpec(spec: ApiSpecification, options?: MockGenerateOptions): MockGenerateResult {
+  generateFromSpec(spec: ApiSpecification, options: MockGenerateOptions | undefined, ownerUserId: string): MockGenerateResult {
     if (options?.overwriteExisting) {
-      this.routes.clear();
+      for (const route of this.getRoutes(ownerUserId)) this.routes.delete(route.id);
     }
 
     const defaultDelay = Math.max(0, options?.defaultDelayMs || 0);
@@ -226,6 +230,7 @@ export class MockServerService {
 
       const route: MockRoute = {
         id,
+        ownerUserId,
         name: endpoint.summary || endpoint.operationId || `${endpoint.method} ${endpoint.path}`,
         description: endpoint.description || `Auto-generated mock from OpenAPI for ${endpoint.method} ${endpoint.path}`,
         method: endpoint.method as HttpMethod,
@@ -311,7 +316,6 @@ export class MockServerService {
       message: `No active mock endpoint matched ${method.toUpperCase()} ${targetPath}`,
       path: targetPath,
       method: method.toUpperCase(),
-      availableRoutesCount: this.getRoutes().filter((r) => r.enabled).length,
     };
 
     if (matchedRoute) {
@@ -334,6 +338,7 @@ export class MockServerService {
     // Record request log
     const logEntry: MockRequestLog = {
       id: `log_${crypto.randomUUID().slice(0, 8)}`,
+      ownerUserId: matchedRoute?.ownerUserId,
       timestamp: new Date().toISOString(),
       method: method.toUpperCase(),
       url: rawUrl,
@@ -364,15 +369,15 @@ export class MockServerService {
   /**
    * Retrieves request execution logs
    */
-  getLogs(): MockRequestLog[] {
-    return [...this.logs];
+  getLogs(ownerUserId: string): MockRequestLog[] {
+    return this.logs.filter((log) => log.ownerUserId === ownerUserId);
   }
 
   /**
    * Clears all request execution logs
    */
-  clearLogs(): void {
-    this.logs = [];
+  clearLogs(ownerUserId: string): void {
+    this.logs = this.logs.filter((log) => log.ownerUserId !== ownerUserId);
   }
 
   // --- Internal Helpers ---

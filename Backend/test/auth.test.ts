@@ -1,6 +1,17 @@
 import { describe, it, beforeEach } from 'node:test';
 import assert from 'node:assert';
-import { authService } from '../src/services/auth.service.js';
+import { authService, resolveJwtSecret } from '../src/services/auth.service.js';
+
+it('requires a strong configured JWT secret in production and uses a random development secret', () => {
+  assert.throws(() => resolveJwtSecret({ NODE_ENV: 'production' }), /JWT_SECRET must be configured/);
+  const strongSecret = 'production-test-secret-with-at-least-32-bytes';
+  assert.strictEqual(resolveJwtSecret({ NODE_ENV: 'production', JWT_SECRET: strongSecret }), strongSecret);
+  assert.throws(() => resolveJwtSecret({ NODE_ENV: 'production', JWT_SECRET: 'short-secret' }), /at least 32 bytes/);
+  const firstDevelopmentSecret = resolveJwtSecret({ NODE_ENV: 'development' });
+  const secondDevelopmentSecret = resolveJwtSecret({ NODE_ENV: 'development' });
+  assert.notEqual(firstDevelopmentSecret, secondDevelopmentSecret);
+  assert.ok(firstDevelopmentSecret.length >= 64);
+});
 
 describe('AuthService and Account Security', () => {
   const testUserCredentials = {
@@ -86,25 +97,47 @@ describe('AuthService and Account Security', () => {
     assert.ok(dupRes.error?.includes('already exists'));
   });
 
+  it('does not accept a privileged role from a public signup payload', () => {
+    const signupRes = authService.signUp(
+      {
+        name: 'Untrusted Admin',
+        email: 'untrusted.admin@apiforge.test',
+        password: 'SecureP@ssw0rd2026!',
+        role: 'admin',
+      },
+      '127.0.0.1',
+      'TestRunner/1.0'
+    );
+
+    assert.equal(signupRes.success, true);
+    assert.equal(signupRes.user?.role, 'engineer');
+  });
+
   it('enforces brute force lockout protection after 5 consecutive failed attempts', () => {
     const email = testUserCredentials.email;
 
-    // 4 failed attempts
+    // 4 failed attempts: generic message that does not reveal the account or remaining attempts
     for (let i = 1; i <= 4; i++) {
       const failRes = authService.login({ email, password: 'WrongPassword1!' }, '10.0.0.1', 'Mozilla/5.0');
       assert.strictEqual(failRes.success, false);
-      assert.ok(failRes.error?.includes(`${5 - i} attempt(s) remaining`));
+      assert.strictEqual(failRes.error, 'Invalid email or password.');
+      assert.strictEqual(failRes.locked, undefined);
     }
 
-    // 5th failed attempt triggers lockout
+    // 5th failed attempt triggers a block for this client
     const lockRes = authService.login({ email, password: 'WrongPassword1!' }, '10.0.0.1', 'Mozilla/5.0');
     assert.strictEqual(lockRes.success, false);
-    assert.ok(lockRes.error?.includes('Account is locked for 15 minutes'));
+    assert.strictEqual(lockRes.locked, true);
+    assert.ok(lockRes.error?.includes('wait 15 minutes'));
 
     // 6th attempt even with correct password is blocked while locked
     const blockedRes = authService.login({ email, password: testUserCredentials.password }, '10.0.0.1', 'Mozilla/5.0');
     assert.strictEqual(blockedRes.success, false);
-    assert.ok(blockedRes.error?.includes('Account temporarily locked'));
+    assert.strictEqual(blockedRes.locked, true);
+
+    // The real owner on another network is not locked out by the attacker.
+    const ownerRes = authService.login({ email, password: testUserCredentials.password }, '10.0.0.99', 'Mozilla/5.0');
+    assert.strictEqual(ownerRes.success, true);
   });
 
   it('records login activity and device audit log correctly', () => {

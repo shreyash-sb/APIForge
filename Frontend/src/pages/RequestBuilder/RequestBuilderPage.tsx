@@ -10,14 +10,14 @@ import {
   Activity,
   Copy,
   Check,
-  Radio,
   X,
-  RadioTower,
   Play,
   Square,
   FileCode,
   CheckCircle2,
   XCircle,
+  FolderPlus,
+  Bookmark,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -53,9 +53,24 @@ interface StreamLog {
 }
 
 export function RequestBuilderPage() {
-  const { requestDraft, setRequestDraft, recordManualRequestExecution, environments, activeEnvironmentId } = useAppStore();
+  const {
+    requestDraft,
+    setRequestDraft,
+    recordManualRequestExecution,
+    environments,
+    activeEnvironmentId,
+    collections,
+    createCollection,
+    updateCollection,
+    addNotification,
+  } = useAppStore();
   const [method, setMethod] = useState<HttpMethod>('GET');
   const [url, setUrl] = useState('');
+  const [saveModalOpen, setSaveModalOpen] = useState(false);
+  const [saveReqName, setSaveReqName] = useState('');
+  const [targetCollectionId, setTargetCollectionId] = useState('');
+  const [newCollectionName, setNewCollectionName] = useState('');
+  const [saveSuccessMsg, setSaveSuccessMsg] = useState('');
   const [activeTab, setActiveTab] = useState<TabType>('params');
   const [queryParams, setQueryParams] = useState<QueryParam[]>([]);
   const [headers, setHeaders] = useState<Header[]>([]);
@@ -66,6 +81,8 @@ export function RequestBuilderPage() {
   const [methodDropdownOpen, setMethodDropdownOpen] = useState(false);
   const [responseTab, setResponseTab] = useState<'body' | 'headers' | 'tests'>('body');
   const [bodyError, setBodyError] = useState<string>('');
+  // Inline, dismissible feedback instead of blocking browser alert() dialogs.
+  const [pageError, setPageError] = useState('');
 
   // ── Pre-Request & Post-Response Scripts State ──
   const [preRequestScript, setPreRequestScript] = useState('');
@@ -89,7 +106,7 @@ export function RequestBuilderPage() {
 
   // ── Scheduled Synthetic Ping Monitor State ──
   const [syntheticActive, setSyntheticActive] = useState(false);
-  const [syntheticInterval, setSyntheticInterval] = useState<number>(15);
+  const [syntheticInterval] = useState<number>(15);
   const [syntheticLogs, setSyntheticLogs] = useState<Array<{ time: string; status: number; duration: number }>>([]);
   const syntheticTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -315,6 +332,52 @@ export function RequestBuilderPage() {
     }
   };
 
+  // ── Save to Collection Handler ──
+  const handleSaveToCollection = () => {
+    if (!url.trim()) {
+      setPageError('Please enter a target URL before saving.');
+      return;
+    }
+
+    let targetId = targetCollectionId;
+    if (!targetId || targetId === 'new') {
+      const colName = newCollectionName.trim() || 'My Collection';
+      targetId = createCollection(colName);
+    }
+
+    const currentCollections = useAppStore.getState().collections;
+    const targetCol = currentCollections.find((c) => c.id === targetId);
+
+    const newReq = {
+      id: crypto.randomUUID(),
+      name: saveReqName.trim() || `${method} ${url.replace(/^https?:\/\/[^/]+/, '') || '/'}`,
+      method,
+      url,
+      queryParams: queryParams.map((q) => ({ ...q })),
+      headers: headers.map((h) => ({ ...h })),
+      body,
+      auth: { ...auth },
+    };
+
+    updateCollection(targetId, {
+      requests: targetCol ? [...targetCol.requests, newReq] : [newReq],
+    });
+
+    addNotification({
+      type: 'success',
+      title: 'Saved to Collection',
+      message: `Request saved to "${targetCol?.name || newCollectionName || 'Collection'}"`,
+      actionUrl: '/collections',
+      actionLabel: 'View Collections',
+    });
+
+    setSaveSuccessMsg('Request saved successfully to collection!');
+    setTimeout(() => {
+      setSaveModalOpen(false);
+      setSaveSuccessMsg('');
+    }, 800);
+  };
+
   // ── Import Handlers ──
   const handleApplyImport = () => {
     if (importType === 'curl') {
@@ -388,7 +451,7 @@ export function RequestBuilderPage() {
       setSyntheticActive(false);
     } else {
       if (!url.trim()) {
-        alert('Please specify a valid URL to monitor.');
+        setPageError('Please specify a valid URL to monitor.');
         return;
       }
       setSyntheticActive(true);
@@ -446,7 +509,7 @@ export function RequestBuilderPage() {
     }
 
     if (!url.trim()) {
-      alert('Please enter a target URL (e.g. wss://echo.websocket.org or https://api.example.com/sse)');
+      setPageError('Please enter a target URL (e.g. wss://echo.websocket.org or https://api.example.com/sse)');
       return;
     }
 
@@ -490,7 +553,7 @@ export function RequestBuilderPage() {
         };
       } catch (err) {
         setStreamConnecting(false);
-        alert(err instanceof Error ? err.message : 'Invalid WebSocket URL');
+        setPageError(err instanceof Error ? err.message : 'Invalid WebSocket URL');
       }
     } else {
       // SSE EventSource
@@ -523,7 +586,7 @@ export function RequestBuilderPage() {
         };
       } catch (err) {
         setStreamConnecting(false);
-        alert(err instanceof Error ? err.message : 'Invalid SSE URL');
+        setPageError(err instanceof Error ? err.message : 'Invalid SSE URL');
       }
     }
   };
@@ -559,6 +622,14 @@ export function RequestBuilderPage() {
 
   return (
     <div className="space-y-5">
+      {pageError && (
+        <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-medium text-rose-700">
+          <span>{pageError}</span>
+          <button type="button" className="shrink-0 font-semibold hover:underline" onClick={() => setPageError('')}>
+            Dismiss
+          </button>
+        </div>
+      )}
       {/* Header */}
       <div className="panel-surface p-4 sm:p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -578,7 +649,7 @@ export function RequestBuilderPage() {
                 setImportFeedback('');
                 setImportModalOpen(true);
               }}
-              className="h-8.5 text-xs font-medium"
+              className="font-medium"
             >
               <FileDown className="h-3.5 w-3.5 mr-1 text-blue-600" />
               Import Request
@@ -587,7 +658,7 @@ export function RequestBuilderPage() {
               variant="outline"
               size="sm"
               onClick={() => setExportModalOpen(true)}
-              className="h-8.5 text-xs font-medium"
+              className="font-medium"
             >
               <Code2 className="h-3.5 w-3.5 mr-1 text-purple-600" />
               Export Code
@@ -596,7 +667,7 @@ export function RequestBuilderPage() {
               variant={syntheticActive ? 'default' : 'outline'}
               size="sm"
               onClick={toggleSyntheticMonitoring}
-              className={`h-8.5 text-xs font-medium gap-1.5 ${
+              className={`h-8 text-xs font-medium gap-1.5 ${
                 syntheticActive ? 'bg-emerald-600 hover:bg-emerald-700 text-white' : ''
               }`}
             >
@@ -615,11 +686,11 @@ export function RequestBuilderPage() {
               <span className="text-emerald-700 font-mono">({syntheticInterval}s interval)</span>
             </div>
             <div className="flex items-center gap-1.5 overflow-x-auto">
-              <span className="text-[10px] uppercase font-bold text-emerald-800">Recent Checks:</span>
+              <span className="text-[11px] font-bold text-emerald-800">Recent Checks:</span>
               {syntheticLogs.slice(0, 5).map((log, i) => (
                 <span
                   key={i}
-                  className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-mono font-bold ${
+                  className={`inline-flex items-center gap-1 rounded px-2 py-0.5 text-[11px] font-mono font-bold ${
                     log.status >= 200 && log.status < 400
                       ? 'bg-emerald-200 text-emerald-900'
                       : 'bg-rose-200 text-rose-900'
@@ -679,7 +750,7 @@ export function RequestBuilderPage() {
             className="flex-1 font-mono text-xs h-10"
           />
 
-          <Button onClick={handleSend} disabled={loading} size="default" className="h-10 px-5 text-xs font-medium gap-1.5">
+          <Button onClick={handleSend} disabled={loading} className="px-5 font-medium gap-1.5">
             {loading ? (
               <>
                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -691,6 +762,23 @@ export function RequestBuilderPage() {
                 Send
               </>
             )}
+          </Button>
+
+          <Button
+            variant="outline"
+            onClick={() => {
+              setSaveReqName(url ? `${method} ${url.replace(/^https?:\/\/[^/]+/, '') || '/'}` : 'New Request');
+              if (collections.length > 0 && !targetCollectionId) {
+                setTargetCollectionId(collections[0].id);
+              }
+              setSaveModalOpen(true);
+            }}
+           
+            className="px-3.5 font-medium gap-1.5 border-slate-200 hover:bg-slate-50"
+            title="Save request to an API Collection"
+          >
+            <FolderPlus className="h-4 w-4 text-sky-600" />
+            Save
           </Button>
         </div>
 
@@ -931,7 +1019,7 @@ export function RequestBuilderPage() {
             <div className="space-y-4">
               <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 rounded-xl border border-slate-200 bg-slate-50/70">
                 <div className="flex items-center gap-3">
-                  <span className="text-xs font-bold text-slate-700 uppercase">Protocol:</span>
+                  <span className="text-xs font-bold text-slate-700">Protocol:</span>
                   <div className="flex gap-2">
                     <button
                       type="button"
@@ -1018,7 +1106,7 @@ export function RequestBuilderPage() {
                     <div key={log.id} className="flex items-start gap-2.5">
                       <span className="text-slate-500 shrink-0">[{log.timestamp}]</span>
                       <span
-                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
+                        className={`px-1.5 py-0.5 rounded text-[11px] font-bold shrink-0 ${
                           log.direction === 'IN'
                             ? 'bg-emerald-950 text-emerald-400 border border-emerald-800'
                             : log.direction === 'OUT'
@@ -1067,7 +1155,7 @@ export function RequestBuilderPage() {
 
                 {/* Quick Helper Snippets */}
                 <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Snippets:</span>
+                  <span className="text-[11px] font-bold text-slate-400">Snippets:</span>
                   {scriptSubTab === 'post' ? (
                     <>
                       <button
@@ -1249,7 +1337,7 @@ export function RequestBuilderPage() {
                     <span>Test Results</span>
                     {scriptAssertions.length > 0 && (
                       <span
-                        className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                        className={`px-1.5 py-0.2 rounded-full text-[11px] font-bold ${
                           scriptAssertions.every((a) => a.passed)
                             ? 'bg-emerald-100 text-emerald-700'
                             : 'bg-rose-100 text-rose-700'
@@ -1332,7 +1420,7 @@ export function RequestBuilderPage() {
 
                         {scriptLogs.length > 0 && (
                           <div className="mt-4">
-                            <p className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-1.5">
+                            <p className="text-xs font-bold text-slate-400 mb-1.5">
                               Script Console Output:
                             </p>
                             <div className="rounded-lg bg-slate-900 p-3 font-mono text-xs text-slate-200 space-y-1">
@@ -1436,7 +1524,7 @@ export function RequestBuilderPage() {
                       className="w-full text-left p-2 rounded-lg bg-white border border-slate-200 hover:border-blue-500 hover:bg-blue-50/50 flex items-center justify-between text-xs transition-colors"
                     >
                       <div className="flex items-center gap-2 truncate pr-2">
-                        <span className="font-bold uppercase text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-800">
+                        <span className="font-bold text-[11px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-800">
                           {item.method}
                         </span>
                         <span className="font-semibold text-slate-900">{item.name}</span>
@@ -1519,6 +1607,88 @@ export function RequestBuilderPage() {
             <div className="mt-5 flex justify-end">
               <Button size="sm" variant="outline" onClick={() => setExportModalOpen(false)}>
                 Close
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── SAVE TO COLLECTION MODAL ── */}
+      {saveModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
+                  <FolderPlus className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-900">Save Request to Collection</h3>
+                  <p className="text-[11px] text-slate-500">Group endpoints into reusable suites</p>
+                </div>
+              </div>
+              <Button variant="ghost" size="icon" onClick={() => setSaveModalOpen(false)} className="h-7 w-7 p-0">
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+
+            <div className="mt-4 space-y-3.5 text-xs">
+              {/* Request Name */}
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Request Name:</label>
+                <Input
+                  value={saveReqName}
+                  onChange={(e) => setSaveReqName(e.target.value)}
+                  placeholder="e.g. Get User Profile"
+                  className="h-8 bg-white text-xs"
+                />
+              </div>
+
+              {/* Target Collection Selection */}
+              <div>
+                <label className="font-semibold text-slate-700 block mb-1">Target Collection:</label>
+                <select
+                  value={targetCollectionId}
+                  onChange={(e) => setTargetCollectionId(e.target.value)}
+                  className="w-full h-8 rounded-md border border-slate-300 bg-white px-2.5 text-xs focus:border-blue-500 focus:outline-none"
+                >
+                  {collections.map((col) => (
+                    <option key={col.id} value={col.id}>
+                      {col.name} ({col.requests.length} requests)
+                    </option>
+                  ))}
+                  <option value="new">+ Create New Collection...</option>
+                </select>
+              </div>
+
+              {/* If "Create New Collection" selected */}
+              {(targetCollectionId === 'new' || collections.length === 0) && (
+                <div>
+                  <label className="font-semibold text-slate-700 block mb-1">New Collection Name:</label>
+                  <Input
+                    value={newCollectionName}
+                    onChange={(e) => setNewCollectionName(e.target.value)}
+                    placeholder="e.g. Authentication Suite"
+                    className="h-8 bg-white text-xs"
+                  />
+                </div>
+              )}
+
+              {saveSuccessMsg && (
+                <div className="flex items-center gap-1.5 rounded-lg bg-emerald-50 p-2 text-xs text-emerald-700 border border-emerald-200">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                  <span>{saveSuccessMsg}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="mt-5 flex items-center justify-end gap-2 border-t border-slate-100 pt-3">
+              <Button size="sm" variant="outline" onClick={() => setSaveModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveToCollection} className="font-semibold gap-1">
+                <Bookmark className="h-3.5 w-3.5" />
+                Save Request
               </Button>
             </div>
           </div>

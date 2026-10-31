@@ -11,11 +11,14 @@ const API_BASE_URL =
 export class RequestService {
   async executeRequest(request: ApiRequest): Promise<ApiExecutionResult> {
     try {
+      const timeoutMs = useAppStore.getState().requestTimeoutMs;
+      // The backend enforces the user's timeout on the outbound call; the browser waits a
+      // little longer so it receives the backend's structured timeout result.
       const response = await axios.post<ApiExecutionResult>(
         `${API_BASE_URL}/api/requests/execute`,
-        request,
+        { ...request, timeoutMs },
         {
-          timeout: useAppStore.getState().requestTimeoutMs,
+          timeout: timeoutMs + 5000,
         }
       );
 
@@ -42,12 +45,20 @@ export class RequestService {
           };
         }
 
-        if (
-          error.response?.data &&
-          typeof error.response.data === 'object' &&
-          'success' in error.response.data
-        ) {
-          return error.response.data as ApiExecutionResult;
+        const data = error.response?.data as { success?: boolean; error?: unknown } | undefined;
+        if (data && typeof data === 'object' && 'success' in data) {
+          // Normalize { error: "message" } (auth middleware) into the structured error shape
+          // so the response panel never renders an empty error.
+          if (typeof data.error === 'string' || !data.error) {
+            return {
+              success: false,
+              error: {
+                type: error.response?.status === 401 ? 'AUTH_ERROR' : 'UNKNOWN_ERROR',
+                message: formatApiErrorMessage(error, 'Request failed.'),
+              },
+            } as ApiExecutionResult;
+          }
+          return data as ApiExecutionResult;
         }
 
         return {

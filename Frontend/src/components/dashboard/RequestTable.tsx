@@ -21,7 +21,7 @@ export function RequestTable({ requests }: RequestTableProps) {
   return (
     <div className="overflow-x-auto">
       <table className="min-w-full text-left text-sm">
-        <thead className="border-b border-slate-200 text-xs uppercase tracking-[0.16em] text-slate-400">
+        <thead className="border-b border-slate-200 text-xs tracking-[0.16em] text-slate-400">
           <tr>
             <th className="pb-3 font-medium">Method</th>
             <th className="pb-3 font-medium">Endpoint</th>

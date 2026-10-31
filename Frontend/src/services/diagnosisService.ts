@@ -50,12 +50,12 @@ export const diagnosisService = {
     }
   },
 
-  async diagnoseBatch(items: DiagnoseBatchItem[]): Promise<DiagnoseBatchResult> {
+  async diagnoseBatch(items: DiagnoseBatchItem[], signal?: AbortSignal): Promise<DiagnoseBatchResult> {
     try {
       const response = await axios.post<DiagnoseBatchResult>(
         `${API_BASE_URL}/api/diagnosis/diagnose-batch`,
         { items },
-        { timeout: 120000 } // Extended for batch AI calls
+        { timeout: 180000, signal } // Each case is a sequential AI call on the server
       );
       return response.data;
     } catch (error: unknown) {

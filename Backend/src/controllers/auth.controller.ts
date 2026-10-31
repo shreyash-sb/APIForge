@@ -1,13 +1,15 @@
 import type { Request, Response } from 'express';
 import { authService } from '../services/auth.service.js';
+import { aiCredentialStore } from '../services/aiCredentialStore.service.js';
 
 export class AuthController {
+  /**
+   * Client IP for auditing and sign-in throttling. Uses Express's req.ip, which only
+   * honours X-Forwarded-For when TRUST_PROXY is configured; a raw header would let any
+   * client choose its own IP and dodge per-IP limits.
+   */
   private getClientIp(req: Request): string {
-    const forwarded = req.headers['x-forwarded-for'];
-    if (typeof forwarded === 'string') {
-      return forwarded.split(',')[0].trim();
-    }
-    return req.socket?.remoteAddress || req.ip || '127.0.0.1';
+    return req.ip || req.socket?.remoteAddress || '127.0.0.1';
   }
 
   private getUserAgent(req: Request): string {
@@ -47,8 +49,7 @@ export class AuthController {
       const result = authService.login(req.body, ip, userAgent);
 
       if (!result.success) {
-        const isLocked = result.error?.includes('locked');
-        res.status(isLocked ? 429 : 401).json(result);
+        res.status(result.locked ? 429 : 401).json(result);
         return;
       }
 
@@ -85,6 +86,8 @@ export class AuthController {
       const token = this.extractBearerToken(req);
       if (token) {
         authService.logout(token);
+        // Session-only AI keys end with the session.
+        aiCredentialStore.removeByToken(token);
       }
       res.status(200).json({ success: true, message: 'Logged out successfully' });
     } catch (error) {
@@ -96,16 +99,18 @@ export class AuthController {
   public getActivity(req: Request, res: Response): void {
     try {
       const token = this.extractBearerToken(req);
-      let userId: string | undefined;
-
-      if (token) {
-        const verified = authService.verifyToken(token);
-        if (verified.valid && verified.user) {
-          userId = verified.user.id;
-        }
+      if (!token) {
+        res.status(401).json({ success: false, error: 'Authentication required' });
+        return;
       }
 
-      const activities = authService.getLoginActivity(userId);
+      const verified = authService.verifyToken(token);
+      if (!verified.valid || !verified.user) {
+        res.status(401).json({ success: false, error: verified.error || 'Invalid session' });
+        return;
+      }
+
+      const activities = authService.getLoginActivity(verified.user.id);
       res.status(200).json({ success: true, activities });
     } catch (error) {
       console.error('Error fetching login activity:', error);
@@ -155,6 +160,7 @@ export class AuthController {
       }
 
       const result = await authService.deleteAccount(verified.user.id, token);
+      if (result.success) aiCredentialStore.removeUser(verified.user.id);
       if (!result.success) {
         res.status(400).json(result);
         return;

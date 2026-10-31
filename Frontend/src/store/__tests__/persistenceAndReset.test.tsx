@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen } from '@testing-library/react';
+import { screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Header } from '@/components/layout/Header';
 import { SettingsPage } from '@/pages/Settings/SettingsPage';
@@ -24,7 +24,7 @@ describe('Frontend Persistence & Reset Workspace Integration Tests', () => {
       [mockTestCase.id]: mockExecutionResult,
     });
 
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    const nativeConfirm = vi.spyOn(window, 'confirm');
 
     renderWithRouter(<SettingsPage />, { route: '/settings' });
 
@@ -33,9 +33,13 @@ describe('Frontend Persistence & Reset Workspace Integration Tests', () => {
 
     await user.click(resetBtn);
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Are you sure you want to reset the workspace?')
-    );
+    // An in-app dialog asks for confirmation; nothing is reset until it is confirmed.
+    const dialog = screen.getByRole('alertdialog', { name: /reset workspace\?/i });
+    expect(dialog).toHaveTextContent(/clears all loaded specifications/i);
+    expect(useAppStore.getState().generatedTests).toHaveLength(1);
+    await user.click(within(dialog).getByRole('button', { name: /^reset workspace$/i }));
+    expect(nativeConfirm).not.toHaveBeenCalled();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
 
     // Verify workspace state reset to initial defaults
     const state = useAppStore.getState();
@@ -49,12 +53,17 @@ describe('Frontend Persistence & Reset Workspace Integration Tests', () => {
     useAppStore.getState().setActiveSpecification(mockSpecification);
     useAppStore.getState().setGeneratedTests([mockTestCase]);
 
-    vi.spyOn(window, 'confirm').mockReturnValue(false);
-
     renderWithRouter(<SettingsPage />, { route: '/settings' });
 
     const resetBtn = screen.getAllByRole('button', { name: /reset workspace/i })[0];
     await user.click(resetBtn);
+    await user.click(within(screen.getByRole('alertdialog')).getByRole('button', { name: /cancel/i }));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+
+    // Escape also dismisses without resetting.
+    await user.click(resetBtn);
+    await user.keyboard('{Escape}');
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
 
     // State must remain intact
     const state = useAppStore.getState();
@@ -127,6 +136,9 @@ describe('Frontend Persistence & Reset Workspace Integration Tests', () => {
       renderWithRouter(<Header />, { route: '/dashboard' });
     }).not.toThrow();
 
-    expect(screen.getByRole('heading', { name: 'Dashboard' })).toBeInTheDocument();
+    // The bar still renders its controls, and the page name is reflected in the tab title.
+    expect(screen.getAllByRole('button', { name: 'Notifications' }).length).toBeGreaterThan(0);
+    expect(screen.getAllByTitle(/Active Environment/i).length).toBeGreaterThan(0);
+    expect(document.title).toBe('Dashboard · APIForge');
   });
 });

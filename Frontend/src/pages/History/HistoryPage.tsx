@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { History, Search, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,13 @@ export function HistoryPage() {
   const [methodFilter, setMethodFilter] = useState('All');
   const [statusCodeFilter, setStatusCodeFilter] = useState<'All' | '2xx' | '4xx' | '5xx'>('All');
   const [selected, setSelected] = useState<HistoryItem>();
+  const detailsRef = useRef<HTMLElement>(null);
+  // The panel renders below the (possibly long) table; bring it into view when opened.
+  useEffect(() => {
+    if (!selected) return;
+    detailsRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+    detailsRef.current?.focus({ preventScroll: true });
+  }, [selected]);
 
   const items = useMemo(
     () => getHistoryItems(executionResults, workflowExecutionResult, manualRequestExecutions),
@@ -53,7 +60,7 @@ export function HistoryPage() {
             </p>
           </div>
           <Link to="/request-builder" className="shrink-0">
-            <Button size="sm" className="h-8.5 gap-1.5 text-xs font-medium">
+            <Button size="sm" className="gap-1.5 font-medium">
               <Send className="h-3.5 w-3.5" />
               Request Builder
             </Button>
@@ -69,7 +76,7 @@ export function HistoryPage() {
               placeholder="Search endpoint or method..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="h-9 pl-8.5 text-xs bg-white"
+              className="h-9 pl-[34px] text-xs bg-white"
             />
           </div>
           <select
@@ -99,7 +106,7 @@ export function HistoryPage() {
         {/* Interactive Method & Status Code Filter Pills */}
         <div className="flex flex-wrap items-center justify-between gap-2.5 pt-3 border-t border-slate-100 text-xs">
           <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Method:</span>
+            <span className="text-[11px] font-bold text-slate-400 mr-1">Method:</span>
             {['All', 'GET', 'POST', 'PUT', 'PATCH', 'DELETE'].map((m) => (
               <button
                 key={m}
@@ -117,7 +124,7 @@ export function HistoryPage() {
           </div>
 
           <div className="flex flex-wrap items-center gap-1">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 mr-1">Status Code:</span>
+            <span className="text-[11px] font-bold text-slate-400 mr-1">Status Code:</span>
             {(
               [
                 { id: 'All', label: 'All Codes' },
@@ -132,7 +139,7 @@ export function HistoryPage() {
                 onClick={() => setStatusCodeFilter(sc.id)}
                 className={`px-2 py-0.5 rounded-md text-[11px] font-semibold transition-colors ${
                   statusCodeFilter === sc.id
-                    ? 'bg-slate-900 text-white shadow-xs'
+                    ? 'bg-blue-600 text-white shadow-xs'
                     : 'bg-slate-50 border border-slate-200 text-slate-600 hover:bg-slate-100'
                 }`}
               >
@@ -158,7 +165,7 @@ export function HistoryPage() {
         <section className="panel-surface overflow-hidden">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-slate-200 bg-slate-50/50 text-xs uppercase tracking-wider text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-50/50 text-xs text-slate-400">
                 <tr>
                   <th className="px-5 py-3.5 font-medium">Method</th>
                   <th className="px-5 py-3.5 font-medium">Endpoint</th>
@@ -197,7 +204,7 @@ export function HistoryPage() {
                       {new Date(item.timestamp).toLocaleString()}
                     </td>
                     <td className="px-5 py-3.5 text-right whitespace-nowrap">
-                      <Button size="sm" variant="outline" className="h-8" onClick={() => setSelected(item)}>
+                      <Button size="sm" variant="outline" onClick={() => setSelected(item)}>
                         Details
                       </Button>
                     </td>
@@ -214,7 +221,7 @@ export function HistoryPage() {
 
       {/* Diagnostic Details Panel */}
       {selected && (
-        <section className="panel-surface p-6">
+        <section ref={detailsRef} tabIndex={-1} aria-label="Execution details" className="panel-surface p-6 focus:outline-none">
           <div className="flex items-center justify-between border-b border-slate-100 pb-4">
             <div>
               <h2 className="text-base font-semibold text-slate-950">Safe diagnostic details</h2>
@@ -226,24 +233,24 @@ export function HistoryPage() {
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Execution Type</p>
+              <p className="text-[11px] font-semibold text-slate-400">Execution Type</p>
               <p className="mt-1 text-sm font-medium text-slate-800">{selected.type}</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Endpoint</p>
+              <p className="text-[11px] font-semibold text-slate-400">Endpoint</p>
               <p className="mt-1 font-mono text-xs font-medium text-slate-800 truncate">{selected.endpoint}</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Status</p>
+              <p className="text-[11px] font-semibold text-slate-400">Status</p>
               <p className="mt-1 text-sm font-medium text-slate-800">{selected.httpStatus ?? selected.status}</p>
             </div>
             <div className="rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Validation</p>
+              <p className="text-[11px] font-semibold text-slate-400">Validation</p>
               <p className="mt-1 text-sm font-medium text-slate-800">{selected.validationStatus ?? 'Not recorded'}</p>
             </div>
           </div>
           <div className="mt-3 rounded-xl border border-slate-100 bg-slate-50/70 p-3.5">
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Diagnostic Details</p>
+            <p className="text-[11px] font-semibold text-slate-400">Diagnostic Details</p>
             <p className="mt-1 font-mono text-xs text-slate-700 whitespace-pre-wrap">{selected.error ?? 'No diagnostic recorded'}</p>
           </div>
           <p className="mt-4 text-xs text-slate-400">

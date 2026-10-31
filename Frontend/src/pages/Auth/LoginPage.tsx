@@ -32,38 +32,35 @@ export function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-slate-950 px-4 py-12 sm:px-6 lg:px-8">
-      {/* Background glow effects */}
-      <div className="pointer-events-none absolute -top-40 -right-40 h-[500px] w-[500px] rounded-full bg-blue-600/15 blur-[120px]" />
-      <div className="pointer-events-none absolute -bottom-40 -left-40 h-[500px] w-[500px] rounded-full bg-violet-600/15 blur-[120px]" />
+    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-[#F5F5F7] px-4 py-12 sm:px-6 lg:px-8">
 
       <div className="relative w-full max-w-md">
         {/* Logo and Header */}
         <div className="text-center">
-          <div className="inline-flex items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-500 p-3 shadow-lg shadow-blue-500/25">
+          <div className="inline-flex items-center justify-center rounded-[14px] bg-blue-600 p-3">
             <Terminal className="h-7 w-7 text-white" />
           </div>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-white">APIForge</h1>
-          <p className="mt-2 text-sm text-slate-400">
+          <h1 className="mt-4 text-[28px] font-semibold text-slate-900">APIForge</h1>
+          <p className="mt-2 text-sm text-slate-500">
             Secure sign in to your API development & testing workspace
           </p>
         </div>
 
         {/* Card */}
-        <div className="mt-8 rounded-2xl border border-slate-800 bg-slate-900/80 p-8 shadow-2xl backdrop-blur-xl">
+        <div className="mt-8 rounded-2xl border border-black/[0.06] bg-white p-8 shadow-panel">
           {(error || localError) && (
             <div
               role="alert"
-              className="mb-6 flex items-start gap-3 rounded-xl border border-rose-500/20 bg-rose-500/10 p-4 text-sm text-rose-300"
+              className="mb-6 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700"
             >
-              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-rose-400" />
+              <Lock className="mt-0.5 h-4 w-4 shrink-0 text-rose-500" />
               <span>{error || localError}</span>
             </div>
           )}
 
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+              <label className="block text-[13px] font-medium text-slate-700">
                 Email address
               </label>
               <div className="relative mt-2">
@@ -73,7 +70,7 @@ export function LoginPage() {
                   placeholder="Email address"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="border-slate-700 bg-slate-800/80 pl-9 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="pl-9"
                   required
                 />
               </div>
@@ -81,7 +78,7 @@ export function LoginPage() {
 
             <div>
               <div className="flex items-center justify-between">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                <label className="block text-[13px] font-medium text-slate-700">
                   Password
                 </label>
               </div>
@@ -92,13 +89,13 @@ export function LoginPage() {
                   placeholder="Password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="border-slate-700 bg-slate-800/80 pl-9 pr-10 text-white placeholder-slate-500 focus:border-blue-500 focus:ring-blue-500/20"
+                  className="pl-9 pr-10"
                   required
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-200"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700"
                   aria-label={showPassword ? "Hide password" : "Show password"}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -107,12 +104,12 @@ export function LoginPage() {
             </div>
 
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 text-sm text-slate-300">
+              <label className="flex items-center gap-2 text-[13px] text-slate-700">
                 <input
                   type="checkbox"
                   checked={rememberMe}
                   onChange={(e) => setRememberMe(e.target.checked)}
-                  className="h-4 w-4 rounded border-slate-700 bg-slate-800 text-blue-600 focus:ring-blue-500/20"
+                  className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/20"
                 />
                 Remember this device (7 days)
               </label>
@@ -121,7 +118,7 @@ export function LoginPage() {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-blue-600 font-semibold text-white shadow-lg shadow-blue-600/30 hover:bg-blue-500"
+              size="lg" className="w-full"
             >
               {isLoading ? (
                 "Signing In..."
@@ -135,9 +132,9 @@ export function LoginPage() {
           </form>
 
 
-          <p className="mt-6 text-center text-sm text-slate-400">
+          <p className="mt-6 text-center text-sm text-slate-500">
             Don&apos;t have an account yet?{" "}
-            <Link to="/signup" className="font-semibold text-blue-400 hover:text-blue-300">
+            <Link to="/signup" className="font-semibold text-blue-600 hover:underline">
               Sign up free
             </Link>
           </p>

@@ -1,11 +1,12 @@
 import { BookMarked, Copy, Download, Search, Check } from 'lucide-react';
+import { schemaPreview } from '@/lib/jsonGenerator';
 import { Link } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useAppStore } from '@/store/useAppStore';
 import { specificationMarkdown } from '@/lib/documentationData';
-import type { ApiMediaContent, ApiSchema, JsonValue } from '@/types/openapi.types';
+import type { ApiMediaContent, ApiSchema } from '@/types/openapi.types';
 
 const methodBadges: Record<string, string> = {
   GET: 'bg-sky-50 text-sky-700 border-sky-200',
@@ -25,28 +26,11 @@ function schemaLabel(schema?: ApiSchema) {
   );
 }
 
-function schemaExample(schema?: ApiSchema, depth = 0): JsonValue | undefined {
-  if (!schema || depth > 4) return schema?.example ?? schema?.default;
-  if (schema.example !== undefined) return schema.example;
-  if (schema.default !== undefined) return schema.default;
-  if (schema.enum?.length) return schema.enum[0];
-  if (schema.properties) {
-    return Object.fromEntries(
-      Object.entries(schema.properties).map(([key, value]) => [
-        key,
-        schemaExample(value, depth + 1) ?? '',
-      ])
-    );
-  }
-  if (schema.type === 'array') return [schemaExample(schema.items, depth + 1) ?? ''];
-  return undefined;
-}
-
 function exampleFor(content: ApiMediaContent) {
   return (
     content.example ??
     (content.examples ? Object.values(content.examples)[0] : undefined) ??
-    schemaExample(content.schema)
+    schemaPreview(content.schema)
   );
 }
 
@@ -136,7 +120,7 @@ export function DocumentationPage() {
 
         {/* Servers Bar */}
         <div className="mt-5 border-t border-slate-100 pt-4">
-          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Target Servers</h2>
+          <h2 className="text-xs font-bold text-slate-400">Target Servers</h2>
           {specification.servers.length ? (
             <div className="mt-2 flex flex-wrap gap-2">
               {specification.servers.map((server) => (
@@ -170,7 +154,7 @@ export function DocumentationPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Method:</span>
+            <span className="text-[11px] font-bold text-slate-400">Method:</span>
             <select
               aria-label="Method filter"
               value={method}
@@ -251,7 +235,7 @@ export function DocumentationPage() {
 
                 {/* Responses */}
                 <div className="mt-4 border-t border-slate-100 pt-3">
-                  <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
+                  <div className="text-xs font-bold text-slate-400 mb-2">
                     Responses ({endpoint.responses.length})
                   </div>
                   <div className="space-y-2">

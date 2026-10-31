@@ -10,5 +10,5 @@ export function ReportSummaryCards({ report }: { report: ReportSummary }) {
     ['Failed Assertions', report.validation.failedAssertions, XCircle, 'text-rose-700 bg-rose-50'],
     ['AI Diagnoses', report.diagnosis.diagnosedTests, Bot, 'text-amber-700 bg-amber-50'],
   ] as const;
-  return <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">{cards.map(([label, value, Icon, tone]) => <div key={label} className="panel-surface p-4"><div className="flex items-start justify-between"><div><p className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p></div><Icon className={`h-5 w-5 rounded-lg p-1 ${tone}`} /></div></div>)}</section>;
+  return <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-6">{cards.map(([label, value, Icon, tone]) => <div key={label} className="panel-surface p-4"><div className="flex items-start justify-between"><div><p className="text-xs font-medium text-slate-500">{label}</p><p className="mt-2 text-2xl font-semibold text-slate-950">{value}</p></div><Icon className={`h-5 w-5 rounded-lg p-1 ${tone}`} /></div></div>)}</section>;
 }

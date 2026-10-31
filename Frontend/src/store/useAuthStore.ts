@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware';
 import type { LoginActivityItem, User } from '@/types/auth.types';
 import { authService } from '@/services/authService';
 import { useAppStore } from './useAppStore';
+import { SESSION_EXPIRED_EVENT } from '@/services/authAxios';
 
 export interface AuthState {
   user: User | null;
@@ -51,7 +52,7 @@ export const useAuthStore = create<AuthState>()(
             error: null,
             loginActivity: [],
           });
-          useAppStore.getState().setDisplayName('Developer');
+          useAppStore.getState().clearUserWorkspace();
           return { success: true };
         } catch (err: any) {
           const errMsg = err.message || 'Failed to delete account';
@@ -72,7 +73,10 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
               error: null,
             });
+            // Wipe browser-stored workspace data that belongs to a different account.
+            useAppStore.getState().claimWorkspace(res.user.id);
             useAppStore.getState().setDisplayName(res.user.name);
+            void useAppStore.getState().loadCollections();
             void get().fetchActivity();
             return { success: true };
           }
@@ -98,7 +102,10 @@ export const useAuthStore = create<AuthState>()(
               isLoading: false,
               error: null,
             });
+            // Wipe browser-stored workspace data that belongs to a different account.
+            useAppStore.getState().claimWorkspace(res.user.id);
             useAppStore.getState().setDisplayName(res.user.name);
+            void useAppStore.getState().loadCollections();
             void get().fetchActivity();
             return { success: true };
           }
@@ -124,7 +131,11 @@ export const useAuthStore = create<AuthState>()(
           token: null,
           isAuthenticated: false,
           error: null,
+          loginActivity: [],
         });
+        // Signing out removes this account's specs, tests, results, environments, and history
+        // from the browser so the next person on this machine cannot see them.
+        useAppStore.getState().clearUserWorkspace();
       },
 
       checkSession: async () => {
@@ -135,8 +146,10 @@ export const useAuthStore = create<AuthState>()(
         }
         try {
           const user = await authService.getMe(token);
+          useAppStore.getState().claimWorkspace(user.id);
           set({ user, isAuthenticated: true });
           useAppStore.getState().setDisplayName(user.name);
+          void useAppStore.getState().loadCollections();
           return true;
         } catch {
           // Keep active state if backend not responding in mock mode
@@ -167,3 +180,23 @@ export const useAuthStore = create<AuthState>()(
     }
   )
 );
+
+// A 401 from APIForge's backend means the stored session is no longer valid (expired,
+// revoked, or the server restarted). Clear it so routing returns to Sign in with a clear
+// message instead of leaving the UI looking signed in while every request fails.
+if (typeof window !== 'undefined') {
+  window.addEventListener(SESSION_EXPIRED_EVENT, () => {
+    if (!useAuthStore.getState().token) return;
+    useAuthStore.setState({
+      user: null,
+      token: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: 'Your session has expired. Please sign in again.',
+      loginActivity: [],
+    });
+    // Workspace data is kept for the same user signing back in; claimWorkspace() wipes it
+    // if a different account signs in next.
+    useAppStore.getState().setCollections([]);
+  });
+}

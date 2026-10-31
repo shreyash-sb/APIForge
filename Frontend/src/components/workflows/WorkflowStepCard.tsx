@@ -101,7 +101,7 @@ export function WorkflowStepCard({
             type="checkbox"
             checked={step.enabled}
             onChange={(e) => onUpdate({ enabled: e.target.checked })}
-            className="h-4.5 w-4.5 rounded border-slate-300 text-slate-900 focus:ring-slate-900"
+            className="h-[18px] w-[18px] rounded border-slate-300 text-slate-900 focus:ring-slate-900"
             title="Toggle step enabled/disabled"
           />
 
@@ -133,7 +133,7 @@ export function WorkflowStepCard({
           </div>
 
           {step.isTeardown && (
-            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-xs font-bold uppercase tracking-wider text-amber-800">
+            <span className="rounded-full bg-amber-100 border border-amber-300 px-2.5 py-0.5 text-xs font-bold text-amber-800">
               Teardown / Cleanup
             </span>
           )}
@@ -186,7 +186,7 @@ export function WorkflowStepCard({
         <div className="p-4 sm:p-5 space-y-4">
           {/* Target URL */}
           <div className="flex items-center gap-3">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 w-12">URL</span>
+            <span className="text-xs font-bold text-slate-500 w-12">URL</span>
             <Input
               value={step.request.url}
               onChange={(e) =>

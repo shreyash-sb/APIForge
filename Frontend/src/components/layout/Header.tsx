@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { usePageTitle } from "@/hooks/usePageTitle";
 import { useAppStore } from "@/store/useAppStore";
 
-import type { AppNotification, NotificationType } from "@/types/notification.types";
+import type { NotificationType } from "@/types/notification.types";
 
 const NOTIF_COLORS: Record<NotificationType, { bg: string; border: string; iconCls: string; dot: string }> = {
   success: { bg: "bg-emerald-50/70", border: "border-emerald-100", iconCls: "text-emerald-500", dot: "bg-emerald-500" },
@@ -38,6 +38,10 @@ function NotifIcon({ type }: { type: NotificationType }) {
 export function Header() {
   const navigate = useNavigate();
   const { title } = usePageTitle();
+  // The page name lives in the browser tab title rather than repeating the in-page heading.
+  useEffect(() => {
+    document.title = title && title !== "APIForge" ? `${title} · APIForge` : "APIForge";
+  }, [title]);
   const {
     toggleSidebar,
     environments,
@@ -76,22 +80,19 @@ export function Header() {
   const activeVarsCount = (activeEnv?.variables || []).filter((v) => v.enabled).length;
 
   return (
-    <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/95 backdrop-blur-md transition-all">
-      <div className="flex h-16 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
-        {/* ── Left: Navigation Trigger + Short Impactful Title ── */}
+    <header className="sticky top-0 z-20 border-b border-black/[0.08] bg-white/75 backdrop-blur-xl backdrop-saturate-150">
+      <div className="flex h-14 items-center justify-between gap-4 px-4 sm:px-6 lg:px-8">
+        {/* ── Left: navigation trigger (mobile). Pages show their own heading in content. ── */}
         <div className="flex min-w-0 items-center gap-3">
           <Button
             variant="outline"
             size="icon"
-            className="h-9 w-9 shrink-0 rounded-xl border-slate-200 lg:hidden"
+            className="h-8 w-8 shrink-0 lg:hidden"
             onClick={toggleSidebar}
             aria-label="Open navigation"
           >
             <Menu className="h-4 w-4" />
           </Button>
-          <h1 className="truncate text-lg sm:text-xl font-bold tracking-tight text-slate-900">
-            {title}
-          </h1>
         </div>
 
         {/* ── Right: Desktop controls with clean alignment ── */}
@@ -102,25 +103,25 @@ export function Header() {
             <button
               type="button"
               onClick={() => setEnvMenuOpen(!envMenuOpen)}
-              className="flex h-10 items-center gap-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 px-2.5 sm:px-3 lg:px-3.5 text-sm font-semibold text-slate-700 dark:text-slate-200 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-900 hover:shadow-sm"
+              className="flex h-8 items-center gap-2 rounded-lg border border-black/[0.1] bg-white px-2.5 text-[13px] font-medium text-slate-800 shadow-[0_1px_1px_rgba(0,0,0,0.04)] transition-colors hover:bg-slate-50"
               title={`Active Environment: ${activeEnv?.name || "Local"} (${activeVarsCount} active variables)`}
             >
               <Globe className="h-4 w-4 shrink-0 text-blue-500" />
               <span className="max-w-[70px] sm:max-w-[95px] lg:max-w-[130px] truncate">{activeEnv?.name || "Local"}</span>
-              <span className="hidden xl:inline-flex items-center px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+              <span className="hidden xl:inline-flex items-center px-1.5 py-0.2 rounded-full text-[11px] font-bold bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
                 {activeVarsCount} vars
               </span>
               <span className="h-2 w-2 shrink-0 rounded-full bg-emerald-500" />
               <ChevronDown className="h-3.5 w-3.5 shrink-0 text-slate-400" />
             </button>
             {envMenuOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-2xl shadow-slate-200/70 animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-full z-50 mt-2 w-72 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-sheet animate-in fade-in zoom-in-95 duration-150">
                 <div className="px-3 py-2 border-b border-slate-100 flex items-center justify-between">
                   <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
                     <Globe className="h-3.5 w-3.5 text-blue-600" />
                     Environments
                   </span>
-                  <span className="text-[10px] font-semibold text-slate-400">
+                  <span className="text-[11px] font-semibold text-slate-400">
                     {environments.length} available
                   </span>
                 </div>
@@ -149,11 +150,11 @@ export function Header() {
                           <div className="min-w-0">
                             <div className="flex items-center gap-1.5">
                               <span className="truncate font-semibold text-xs text-slate-900">{env.name}</span>
-                              <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 font-mono text-slate-500 font-normal">
+                              <span className="text-[11px] px-1.5 py-0.2 rounded bg-slate-100 font-mono text-slate-500 font-normal">
                                 {count}v
                               </span>
                             </div>
-                            <span className="block truncate font-mono text-[10px] text-slate-400">
+                            <span className="block truncate font-mono text-[11px] text-slate-400">
                               {displayUrl}
                             </span>
                           </div>
@@ -183,24 +184,24 @@ export function Header() {
             <button
               type="button"
               onClick={() => setNotifOpen(!notifOpen)}
-              className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-50/80 dark:bg-slate-900/80 text-slate-600 dark:text-slate-300 transition-all hover:border-slate-300 dark:hover:border-slate-700 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm"
+              className="relative flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-black/[0.1] bg-white text-slate-600 shadow-[0_1px_1px_rgba(0,0,0,0.04)] transition-colors hover:bg-slate-50"
               aria-label="Notifications"
             >
               <Bell className="h-4 w-4" />
               {unreadCount > 0 && (
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-blue-600 ring-2 ring-white" />
+                <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" />
               )}
             </button>
 
             {notifOpen && (
-              <div className="absolute right-0 top-full z-50 mt-2 w-[340px] sm:w-[380px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-2xl shadow-slate-300/50">
+              <div className="absolute right-0 top-full z-50 mt-2 w-[340px] sm:w-[380px] overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sheet">
                 {/* Panel header */}
                 <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 py-3">
                   <div className="flex items-center gap-2 min-w-0">
                     <Bell className="h-4 w-4 shrink-0 text-slate-700" />
                     <span className="text-sm font-bold text-slate-900 truncate">Notifications</span>
                     {unreadCount > 0 && (
-                      <span className="shrink-0 whitespace-nowrap rounded-full bg-blue-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                      <span className="shrink-0 whitespace-nowrap rounded-full bg-blue-600 px-2 py-0.5 text-[11px] font-bold text-white">
                         {unreadCount} new
                       </span>
                     )}
@@ -263,11 +264,11 @@ export function Header() {
                               </div>
                               <p className="mt-1 text-[11px] leading-relaxed text-slate-600">{n.message}</p>
                               <div className="mt-1.5 flex items-center justify-between gap-2">
-                                <span className="text-[10px] text-slate-400">
+                                <span className="text-[11px] text-slate-400">
                                   {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </span>
                                 {n.actionLabel && (
-                                  <span className="text-[10px] font-semibold text-blue-600 hover:underline">
+                                  <span className="text-[11px] font-semibold text-blue-600 hover:underline">
                                     {n.actionLabel} →
                                   </span>
                                 )}
@@ -290,7 +291,7 @@ export function Header() {
 
                 {notifications.length > 0 && (
                   <div className="border-t border-slate-100 bg-slate-50/50 px-4 py-2">
-                    <p className="text-center text-[10px] text-slate-400">Click to open · Hover to dismiss</p>
+                    <p className="text-center text-[11px] text-slate-400">Click to open · Hover to dismiss</p>
                   </div>
                 )}
               </div>

@@ -175,4 +175,34 @@ describe('RequestBuilderPage Component Tests', () => {
     expect(screen.getByText(/Failed to execute request/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send/i })).not.toBeDisabled();
   });
+
+  it('allows saving the active request into a collection', async () => {
+    const user = userEvent.setup();
+    useAppStore.getState().setCollections([]);
+    renderWithRouter(<RequestBuilderPage />);
+
+    const urlInput = screen.getByPlaceholderText('https://api.example.com/users');
+    await user.type(urlInput, 'https://api.example.com/v1/users');
+
+    // Click Save button
+    const saveBtn = screen.getByRole('button', { name: /save/i });
+    await user.click(saveBtn);
+
+    expect(screen.getByText('Save Request to Collection')).toBeInTheDocument();
+
+    // Type collection name if new
+    const nameInput = screen.getByPlaceholderText('e.g. Authentication Suite');
+    await user.type(nameInput, 'User API');
+
+    // Click Save Request
+    const confirmBtn = screen.getByRole('button', { name: /Save Request/i });
+    await user.click(confirmBtn);
+
+    await waitFor(() => {
+      expect(useAppStore.getState().collections).toHaveLength(1);
+      expect(useAppStore.getState().collections[0].name).toBe('User API');
+      expect(useAppStore.getState().collections[0].requests).toHaveLength(1);
+      expect(useAppStore.getState().collections[0].requests[0].url).toBe('https://api.example.com/v1/users');
+    });
+  });
 });

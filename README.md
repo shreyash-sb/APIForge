@@ -1,5 +1,5 @@
 # APIForge 🚀
-> **Autonomous AI-Powered API Engineering Platform**
+> **API Testing & Validation Platform with a Grounded AI Assistant**
 
 [![Tests](https://img.shields.io/badge/Tests-All%20Passing-emerald.svg)](https://github.com/shreyash-sb/APIForge)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-3178C6.svg)](https://www.typescriptlang.org/)
@@ -12,12 +12,18 @@ APIForge is a modern developer platform that unifies the entire REST API lifecyc
 
 ### ⚡ Highlights
 
-- 🤖 **Autonomous AI Agent**: Plans and executes API tasks with Human-in-the-Loop approval safeguards.
+- 🤖 **Grounded AI Assistant & Diagnosis**: Answers questions about your spec, tests, and results, and explains failures — using your own Gemini key (advisory only).
 - 🛠️ **Request Builder & History**: Test endpoints with live response inspection, auth headers, and execution history.
 - 📄 **OpenAPI 3.1 & Test Generator**: Import Swagger/OAS to generate positive, negative, and edge-case test suites.
 - 🔄 **Chained Workflows**: Run dependent requests with automatic runtime variable extraction.
 - 🎭 **Dynamic Mock Server**: Spin up instant mock routes with configurable status codes and response bodies.
 - 📊 **Telemetry & Health**: Real-time pass/fail rates, latency charts, and backend health monitoring.
+
+---
+
+### 🔑 AI Features (optional, bring your own Gemini key)
+
+AI diagnosis (Reports → *Diagnose failures*) and the session-aware AI Assistant use **your own Gemini API key**. Add it in **Settings → AI Provider**. Google usage and billing belong to your account. The key lives only in backend memory for your current sign-in session: it is never returned, persisted or logged, and is cleared on sign-out. Without a key, AI features run in clearly labelled mock/demo mode. AI results are advisory; deterministic validation stays authoritative. See [Backend/README.md](Backend/README.md#ai-features-user-supplied-gemini-keys) for details.
 
 ---
 

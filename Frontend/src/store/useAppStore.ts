@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, type PersistStorage } from "zustand/middleware";
-import type { Auth, Header, HttpMethod, ManualRequestExecution, QueryParam, RequestDraft, ApiCollection } from '@/types/request.types';
+import { collectionService } from '../services/collectionService';
+import type { ManualRequestExecution, RequestDraft, ApiCollection } from '@/types/request.types';
 import { redactEndpoint } from '../lib/requestRedaction';
 import type { ApiSpecification } from '@/types/openapi.types';
 import type { TestCase } from '@/types/testCase.types';
@@ -12,9 +13,8 @@ import type { FrontendEnvironmentProfile } from '@/types/environment.types';
 import type { SanitizedWorkflowExecutionResult, WorkflowScenario } from '@/types/workflow.types';
 import type { MockRequestLog, MockRoute } from '@/types/mockServer.types';
 import type { AppNotification } from '@/types/notification.types';
-import type { AgentTask } from '@/types/agent.types';
 
-export type { RequestDraft, ApiCollection, AppNotification, AgentTask };
+export type { RequestDraft, ApiCollection, AppNotification };
 
 type User = {
   name: string;
@@ -353,6 +353,8 @@ export type AppState = {
   manualRequestExecutions: ManualRequestExecution[];
   recordManualRequestExecution: (execution: ManualRequestExecution) => void;
   collections: ApiCollection[];
+  setCollections: (collections: ApiCollection[]) => void;
+  loadCollections: () => Promise<void>;
   createCollection: (name: string) => string;
   updateCollection: (id: string, updates: Partial<Pick<ApiCollection, 'name' | 'requests'>>) => void;
   deleteCollection: (id: string) => void;
@@ -400,29 +402,21 @@ export type AppState = {
   removeNotification: (id: string) => void;
   clearNotifications: () => void;
 
-  // Agent Orchestrator Tasks
-  agentTasks: AgentTask[];
-  activeAgentTaskId?: string;
-  setAgentTasks: (tasks: AgentTask[]) => void;
-  setActiveAgentTaskId: (id: string | undefined) => void;
-  addAgentTask: (task: AgentTask) => void;
-  updateAgentTask: (task: AgentTask) => void;
 
   // Phase 12 Reset Workspace Action
   resetWorkspace: () => void;
+
+  /**
+   * Browser-stored workspace data belongs to one account. claimWorkspace() is called on
+   * sign-in: if the stored data belongs to a different account it is wiped first.
+   * clearUserWorkspace() wipes it on sign-out/account deletion.
+   */
+  workspaceOwnerId?: string;
+  claimWorkspace: (userId: string) => void;
+  clearUserWorkspace: () => void;
 };
 
 export const defaultNotifications: AppNotification[] = [
-  {
-    id: 'notif-1',
-    type: 'success',
-    title: 'Agent Engine Online',
-    message: 'APIForge Agentic AI Engineering Platform initialized with 10 real execution tools.',
-    timestamp: new Date().toISOString(),
-    read: false,
-    actionUrl: '/ai-assistant',
-    actionLabel: 'Agent Workspace',
-  },
   {
     id: 'notif-2',
     type: 'info',
@@ -434,6 +428,33 @@ export const defaultNotifications: AppNotification[] = [
     actionLabel: 'Manage',
   },
 ];
+
+/** Workspace data cleared on reset or account change (preferences like display name excluded). */
+function workspaceDataDefaults(): Partial<AppState> {
+  return {
+    requestDraft: undefined,
+    requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
+    activeSpecification: undefined,
+    generatedTests: [],
+    executionResults: {},
+    validationResults: {},
+    validationSuiteSummary: undefined,
+    diagnosisResults: {},
+    reportSummary: undefined,
+    manualRequestExecutions: [],
+    collections: [],
+    environments: defaultEnvironments,
+    activeEnvironmentId: 'env-local',
+    workflows: defaultWorkflows,
+    activeWorkflowId: 'wf-user-order-flow',
+    workflowExecutionResult: undefined,
+    workflowExecutionRunning: false,
+    workflowExecutionError: undefined,
+    mockRoutes: [],
+    activeMockRouteId: undefined,
+    mockLogs: [],
+  };
+}
 
 export const useAppStore = create<AppState>()(
   persist(
@@ -479,9 +500,45 @@ export const useAppStore = create<AppState>()(
         manualRequestExecutions: sanitizeManualRequestExecutions([...state.manualRequestExecutions, execution]),
       })),
       collections: [],
-      createCollection: (name) => { const id = `collection-${crypto.randomUUID().slice(0, 8)}`; const now = new Date().toISOString(); set((state) => ({ collections: [...state.collections, { id, name: name.trim() || 'Untitled collection', requests: [], createdAt: now, updatedAt: now }] })); return id; },
-      updateCollection: (id, updates) => set((state) => ({ collections: state.collections.map((item) => item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item) })),
-      deleteCollection: (id) => set((state) => ({ collections: state.collections.filter((item) => item.id !== id) })),
+      setCollections: (collections) => set({ collections: Array.isArray(collections) ? collections : [] }),
+      loadCollections: async () => {
+        try {
+          const collections = await collectionService.getCollections();
+          if (Array.isArray(collections)) {
+            set({ collections });
+          }
+        } catch {
+          // Keep existing state if offline or unauthenticated
+        }
+      },
+      createCollection: (name) => {
+        const id = `col_${crypto.randomUUID().slice(0, 8)}`;
+        const now = new Date().toISOString();
+        const newCollection: ApiCollection = {
+          id,
+          name: name.trim() || 'Untitled collection',
+          requests: [],
+          createdAt: now,
+          updatedAt: now,
+        };
+        set((state) => ({ collections: [...state.collections, newCollection] }));
+        void Promise.resolve(collectionService.createCollection({ id, name: newCollection.name, requests: [] })).catch(() => {});
+        return id;
+      },
+      updateCollection: (id, updates) => {
+        set((state) => ({
+          collections: state.collections.map((item) =>
+            item.id === id ? { ...item, ...updates, updatedAt: new Date().toISOString() } : item
+          ),
+        }));
+        void Promise.resolve(collectionService.updateCollection(id, updates)).catch(() => {});
+      },
+      deleteCollection: (id) => {
+        set((state) => ({
+          collections: state.collections.filter((item) => item.id !== id),
+        }));
+        void Promise.resolve(collectionService.deleteCollection(id)).catch(() => {});
+      },
 
       // Phase 9 Environment Management
       environments: defaultEnvironments,
@@ -691,48 +748,26 @@ export const useAppStore = create<AppState>()(
         })),
       clearNotifications: () => set({ notifications: [] }),
 
-      // Agent Orchestrator Tasks
-      agentTasks: [],
-      activeAgentTaskId: undefined,
-      setAgentTasks: (agentTasks) => set({ agentTasks }),
-      setActiveAgentTaskId: (activeAgentTaskId) => set({ activeAgentTaskId }),
-      addAgentTask: (task) =>
-        set((state) => ({
-          agentTasks: [task, ...state.agentTasks.filter((t) => t.taskId !== task.taskId)],
-          activeAgentTaskId: task.taskId,
-        })),
-      updateAgentTask: (task) =>
-        set((state) => ({
-          agentTasks: state.agentTasks.map((t) => (t.taskId === task.taskId ? task : t)),
-        })),
+      claimWorkspace: (userId) => {
+        const owner = get().workspaceOwnerId;
+        // Data saved before ownership tracking existed (no owner) is adopted by the first sign-in.
+        if (owner && owner !== userId) get().clearUserWorkspace();
+        set({ workspaceOwnerId: userId });
+      },
+      clearUserWorkspace: () => {
+        set({
+          ...workspaceDataDefaults(),
+          currentUser: { name: 'Developer', role: 'API Engineer' },
+          notifications: [],
+          workspaceOwnerId: undefined,
+        });
+      },
 
       // Phase 12 Reset Workspace Action
       resetWorkspace: () => {
         safePersistStorage.removeItem('apiforge-workspace');
         set({
-          requestDraft: undefined,
-          requestTimeoutMs: DEFAULT_REQUEST_TIMEOUT_MS,
-          activeSpecification: undefined,
-          generatedTests: [],
-          executionResults: {},
-          validationResults: {},
-          validationSuiteSummary: undefined,
-          diagnosisResults: {},
-          reportSummary: undefined,
-          manualRequestExecutions: [],
-          collections: [],
-          environments: defaultEnvironments,
-          activeEnvironmentId: 'env-local',
-          workflows: defaultWorkflows,
-          activeWorkflowId: 'wf-user-order-flow',
-          workflowExecutionResult: undefined,
-          workflowExecutionRunning: false,
-          workflowExecutionError: undefined,
-          mockRoutes: [],
-          activeMockRouteId: undefined,
-          mockLogs: [],
-          agentTasks: [],
-          activeAgentTaskId: undefined,
+          ...workspaceDataDefaults(),
           notifications: [
             {
               id: `notif-${Date.now()}`,
@@ -749,7 +784,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'apiforge-workspace',
       storage: safePersistStorage,
-      version: 2,
+      version: 3,
       migrate: (persistedState: unknown, version: number) => {
         if (version < 1 || !persistedState || typeof persistedState !== 'object') {
           return {
@@ -764,15 +799,18 @@ export const useAppStore = create<AppState>()(
             mockRoutes: [],
             mockLogs: [],
             notifications: defaultNotifications,
-            agentTasks: [],
           };
         }
-        const existing = persistedState as Partial<AppState>;
+        // v3: the agent workspace was removed — drop its stored tasks and its notifications.
+        const existing = { ...(persistedState as Partial<AppState> & { agentTasks?: unknown; activeAgentTaskId?: unknown }) };
+        delete existing.agentTasks;
+        delete existing.activeAgentTaskId;
         return {
           ...existing,
           requestTimeoutMs: clampRequestTimeout(existing.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS),
-          notifications: existing.notifications ?? defaultNotifications,
-          agentTasks: existing.agentTasks ?? [],
+          notifications: (existing.notifications ?? defaultNotifications).filter(
+            (notification) => notification.actionLabel !== 'Agent Workspace' && notification.title !== 'Agent Engine Online'
+          ),
         };
       },
       partialize: (state) => ({
@@ -797,7 +835,7 @@ export const useAppStore = create<AppState>()(
         activeMockRouteId: state.activeMockRouteId,
         mockLogs: state.mockLogs.slice(-50),
         notifications: state.notifications.slice(0, 30),
-        agentTasks: state.agentTasks.slice(0, 20),
+        workspaceOwnerId: state.workspaceOwnerId,
       }),
       onRehydrateStorage: () => (state, error) => {
         if (error) {

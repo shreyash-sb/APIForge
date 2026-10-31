@@ -49,6 +49,8 @@ export interface AuthResponse {
   expiresIn?: string;
   message?: string;
   error?: string;
+  /** Sign-in is temporarily blocked after repeated failures (HTTP 429). */
+  locked?: boolean;
 }
 
 export interface ChangePasswordRequest {
