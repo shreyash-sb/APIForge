@@ -1,0 +1,10 @@
+{
+  "swagger": "2.0",
+  "info": { "title": "Legacy API", "version": "2.0" },
+  "host": "legacy.example.com",
+  "basePath": "/api",
+  "schemes": ["https", "http"],
+  "paths": { "/items": { "post": { "consumes": ["application/json"], "parameters": [{ "in": "body", "name": "body", "required": true, "schema": { "$ref": "#/definitions/Item" } }], "responses": { "201": { "description": "Created", "schema": { "$ref": "#/definitions/Item" } } } } } },
+  "definitions": { "Item": { "type": "object", "properties": { "id": { "type": "integer" } } } },
+  "securityDefinitions": { "key": { "type": "apiKey", "name": "api_key", "in": "query" } }
+}

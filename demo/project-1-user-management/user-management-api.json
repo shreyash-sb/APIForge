@@ -1,0 +1,294 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "User Management API",
+    "version": "1.0.0",
+    "description": "APIForge integrated demonstration API for managing university users, roles, and profiles."
+  },
+  "servers": [
+    {
+      "url": "http://localhost:3001/api/mock/serve",
+      "description": "Local APIForge Mock Server"
+    }
+  ],
+  "paths": {
+    "/api/users": {
+      "get": {
+        "operationId": "getUsers",
+        "summary": "Retrieve users",
+        "description": "Returns a list of all active user records.",
+        "responses": {
+          "200": {
+            "description": "Users retrieved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/User"
+                  }
+                },
+                "example": [
+                  {
+                    "id": 101,
+                    "name": "Aarav Patil",
+                    "email": "aarav@example.com",
+                    "role": "student",
+                    "active": true
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "createUser",
+        "summary": "Create a user",
+        "description": "Creates a new user account with role and status.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserInput"
+              },
+              "example": {
+                "name": "Aarav Patil",
+                "email": "aarav@example.com",
+                "role": "student",
+                "active": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "User created successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 101,
+                  "name": "Aarav Patil",
+                  "email": "aarav@example.com",
+                  "role": "student",
+                  "active": true
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid input data or missing required field"
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "description": "Unique integer identifier of the user",
+          "schema": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "example": 101
+        }
+      ],
+      "get": {
+        "operationId": "getUserById",
+        "summary": "Retrieve one user",
+        "description": "Returns details for a specific user ID.",
+        "responses": {
+          "200": {
+            "description": "User found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 101,
+                  "name": "Aarav Patil",
+                  "email": "aarav@example.com",
+                  "role": "student",
+                  "active": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "put": {
+        "operationId": "updateUser",
+        "summary": "Update a user",
+        "description": "Updates an existing user record by ID.",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserInput"
+              },
+              "example": {
+                "name": "Aarav Patil",
+                "email": "aarav@example.com",
+                "role": "student",
+                "active": true
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "User updated successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                },
+                "example": {
+                  "id": 101,
+                  "name": "Aarav Patil",
+                  "email": "aarav@example.com",
+                  "role": "student",
+                  "active": true
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      },
+      "delete": {
+        "operationId": "deleteUser",
+        "summary": "Delete a user",
+        "description": "Deletes a user account by ID.",
+        "responses": {
+          "200": {
+            "description": "User deleted successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeleteResponse"
+                },
+                "example": {
+                  "success": true,
+                  "message": "User 101 deleted"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "User": {
+        "type": "object",
+        "required": [
+          "id",
+          "name",
+          "email",
+          "role",
+          "active"
+        ],
+        "properties": {
+          "id": {
+            "type": "integer",
+            "minimum": 1,
+            "example": 101
+          },
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "example": "Aarav Patil"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "aarav@example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "faculty",
+              "admin"
+            ],
+            "example": "student"
+          },
+          "active": {
+            "type": "boolean",
+            "example": true
+          }
+        }
+      },
+      "CreateUserInput": {
+        "type": "object",
+        "required": [
+          "name",
+          "email",
+          "role"
+        ],
+        "properties": {
+          "name": {
+            "type": "string",
+            "minLength": 2,
+            "example": "Aarav Patil"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "example": "aarav@example.com"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "faculty",
+              "admin"
+            ],
+            "example": "student"
+          },
+          "active": {
+            "type": "boolean",
+            "default": true,
+            "example": true
+          }
+        }
+      },
+      "DeleteResponse": {
+        "type": "object",
+        "required": [
+          "success",
+          "message"
+        ],
+        "properties": {
+          "success": {
+            "type": "boolean",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "example": "User 101 deleted"
+          }
+        }
+      }
+    }
+  }
+}

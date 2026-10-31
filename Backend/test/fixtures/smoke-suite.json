@@ -1,0 +1,25 @@
+{
+  "specificationTitle": "APIForge CLI Smoke Test Suite",
+  "tests": [
+    {
+      "id": "tc_smoke_1",
+      "name": "Health Endpoint Check",
+      "description": "Baseline smoke test to verify CLI execution pipeline",
+      "type": "POSITIVE",
+      "priority": "LOW",
+      "enabled": true,
+      "endpoint": { "method": "GET", "path": "/health" },
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:3001/health",
+        "queryParams": [],
+        "headers": [],
+        "body": "",
+        "auth": { "type": "none" }
+      },
+      "pathParams": {},
+      "expected": { "statusCodes": ["200"] },
+      "metadata": { "sourceEndpointId": "ep_health", "rule": "health-check" }
+    }
+  ]
+}

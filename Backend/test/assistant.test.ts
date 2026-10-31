@@ -1,0 +1,4 @@
+import test from 'node:test'; import assert from 'node:assert/strict'; import { AssistantService } from '../src/services/assistant.service.js'; import type { AiProvider } from '../src/services/aiProvider.service.js';
+const provider: AiProvider = { name: 'mock', diagnose: async () => ({ confidence: 'HIGH', summary: '', findings: [] }), assist: async (message, context) => `${message}|${context}` };
+test('assistant sanitizes selected context and identifies provider', async () => { const result = await new AssistantService(provider).ask('help', 'token=secret-value'); assert.equal(result.provider, 'mock'); assert.match(result.reply, /\[REDACTED\]/); assert.equal(result.contextUsed, true); });
+test('assistant rejects empty and oversized messages', async () => { const service = new AssistantService(provider); await assert.rejects(() => service.ask('')); await assert.rejects(() => service.ask('x'.repeat(4001))); });

@@ -1,0 +1,32 @@
+[
+  {
+    "id": "env-local",
+    "name": "Local Mock Server",
+    "isDefault": true,
+    "variables": [
+      { "id": "v1", "key": "baseUrl", "value": "http://localhost:3001/api/mock/serve", "enabled": true, "isSecret": false },
+      { "id": "v2", "key": "apiKey", "value": "dev-local-secret-key-99", "enabled": true, "isSecret": true },
+      { "id": "v3", "key": "timeout", "value": "5000", "enabled": true, "isSecret": false }
+    ]
+  },
+  {
+    "id": "env-staging",
+    "name": "Staging Cloud",
+    "isDefault": false,
+    "variables": [
+      { "id": "v4", "key": "baseUrl", "value": "https://staging-api.example.com/v1", "enabled": true, "isSecret": false },
+      { "id": "v5", "key": "apiKey", "value": "staging-live-key-xyz", "enabled": true, "isSecret": true },
+      { "id": "v6", "key": "timeout", "value": "10000", "enabled": true, "isSecret": false }
+    ]
+  },
+  {
+    "id": "env-production",
+    "name": "Production Cluster",
+    "isDefault": false,
+    "variables": [
+      { "id": "v7", "key": "baseUrl", "value": "https://api.example.com/v1", "enabled": true, "isSecret": false },
+      { "id": "v8", "key": "apiKey", "value": "prod-secure-token-88", "enabled": true, "isSecret": true },
+      { "id": "v9", "key": "timeout", "value": "30000", "enabled": true, "isSecret": false }
+    ]
+  }
+]

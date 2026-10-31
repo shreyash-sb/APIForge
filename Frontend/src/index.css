@@ -1,0 +1,90 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 240 11% 96%; /* #F5F5F7 */
+    --foreground: 240 3% 12%; /* #1D1D1F */
+    --card: 0 0% 100%;
+    --card-foreground: 240 3% 12%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 3% 12%;
+    --primary: 211 100% 45%; /* #0071E3 */
+    --primary-foreground: 0 0% 100%;
+    --secondary: 240 9% 94%;
+    --secondary-foreground: 240 3% 12%;
+    --muted: 240 9% 94%;
+    --muted-foreground: 240 2% 44%; /* #6E6E73 */
+    --accent: 240 9% 94%;
+    --accent-foreground: 240 3% 12%;
+    --destructive: 3 100% 59%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 240 6% 88%;
+    --input: 240 6% 84%;
+    --ring: 211 100% 45%;
+    --success: 135 59% 49%;
+    --warning: 35 100% 50%;
+    --info: 211 100% 52%;
+    --ai: 211 100% 45%;
+    --chart-1: 211 100% 52%; /* blue */
+    --chart-2: 35 100% 50%; /* orange */
+    --chart-3: 135 59% 49%; /* green */
+    --chart-4: 3 100% 59%; /* red */
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply min-h-screen bg-background text-foreground antialiased text-[14px] leading-normal;
+    font-feature-settings: "rlig" 1, "calt" 1;
+    letter-spacing: -0.006em;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.015em;
+  }
+
+  #root {
+    @apply min-h-screen;
+  }
+}
+
+@layer components {
+  /* Grouped content card: white, hairline border, barely-there shadow. */
+  .panel-surface {
+    @apply rounded-xl border border-black/[0.07] bg-white shadow-soft;
+  }
+}
+
+/* Custom sleek scrollbar for modern browsers and dark sidebar */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.25);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.45);
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
