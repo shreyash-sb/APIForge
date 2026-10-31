@@ -1,0 +1,10 @@
+{
+  "customerEmail": "customer@example.com",
+  "items": [
+    {
+      "productId": 201,
+      "quantity": 1
+    }
+  ],
+  "shippingAddress": "123 Technology Park, Mumbai"
+}

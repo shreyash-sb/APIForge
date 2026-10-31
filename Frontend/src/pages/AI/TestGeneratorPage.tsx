@@ -10,7 +10,9 @@ import {
   Loader2,
   Play,
   RefreshCw,
+  ShoppingBag,
   Trash2,
+  Users,
   XCircle,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -20,6 +22,9 @@ import { Input } from '@/components/ui/input';
 import { testGeneratorService } from '@/services/testGeneratorService';
 import { testExecutionService } from '@/services/testExecutionService';
 import { useAppStore } from '@/store/useAppStore';
+import { openApiService } from '@/services/openapiService';
+import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
+import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
 import type { TestCase, TestCaseType, TestGenerationSettings } from '@/types/testCase.types';
 import type {
   TestCaseExecutionResult,
@@ -59,6 +64,7 @@ const executionStatusBadge: Record<
 
 export function TestGeneratorPage() {
   const specification = useAppStore((state) => state.activeSpecification);
+  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
   const storeGeneratedTests = useAppStore((state) => state.generatedTests);
   const setStoreGeneratedTests = useAppStore((state) => state.setGeneratedTests);
   const storeExecutionResults = useAppStore((state) => state.executionResults);
@@ -105,9 +111,41 @@ export function TestGeneratorPage() {
           The deterministic generator consumes APIForge’s normalized OpenAPI model. Import a specification first; no
           target API requests are sent during generation.
         </p>
-        <Link to="/openapi">
-          <Button className="mt-5">Import OpenAPI</Button>
-        </Link>
+        <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
+          <Link to="/openapi">
+            <Button variant="outline">Import OpenAPI</Button>
+          </Link>
+          <Button
+            onClick={async () => {
+              const res = await openApiService.importSpecification(
+                'user-management-api.json',
+                USER_MANAGEMENT_SPEC_JSON
+              );
+              if (res.success && res.specification) {
+                setActiveSpecification(res.specification);
+              }
+            }}
+            className="bg-sky-600 hover:bg-sky-700 text-white gap-1.5"
+          >
+            <Users className="h-4 w-4" />
+            + User API Spec
+          </Button>
+          <Button
+            onClick={async () => {
+              const res = await openApiService.importSpecification(
+                'ecommerce-store-api.json',
+                ECOMMERCE_SPEC_JSON
+              );
+              if (res.success && res.specification) {
+                setActiveSpecification(res.specification);
+              }
+            }}
+            className="bg-emerald-600 hover:bg-emerald-700 text-white gap-1.5"
+          >
+            <ShoppingBag className="h-4 w-4" />
+            + QuickCart Spec
+          </Button>
+        </div>
       </div>
     );
   }

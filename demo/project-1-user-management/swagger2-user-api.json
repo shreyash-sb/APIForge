@@ -1,0 +1,95 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "User Management API (Swagger 2.0)",
+    "version": "1.0.0",
+    "description": "Swagger 2.0 format demonstration of the User Management API."
+  },
+  "host": "localhost:3001",
+  "basePath": "/api/mock/serve",
+  "schemes": ["http"],
+  "paths": {
+    "/api/users": {
+      "get": {
+        "summary": "Retrieve users",
+        "description": "Returns list of users",
+        "responses": {
+          "200": {
+            "description": "Successful retrieval",
+            "schema": {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/User"
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Create user",
+        "parameters": [
+          {
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/CreateUserInput"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "User created",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        }
+      }
+    },
+    "/api/users/{id}": {
+      "parameters": [
+        {
+          "name": "id",
+          "in": "path",
+          "required": true,
+          "type": "integer"
+        }
+      ],
+      "get": {
+        "summary": "Retrieve one user",
+        "responses": {
+          "200": {
+            "description": "User found",
+            "schema": {
+              "$ref": "#/definitions/User"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "User": {
+      "type": "object",
+      "required": ["id", "name", "email", "role", "active"],
+      "properties": {
+        "id": { "type": "integer", "example": 101 },
+        "name": { "type": "string", "example": "Aarav Patil" },
+        "email": { "type": "string", "example": "aarav@example.com" },
+        "role": { "type": "string", "example": "student" },
+        "active": { "type": "boolean", "example": true }
+      }
+    },
+    "CreateUserInput": {
+      "type": "object",
+      "required": ["name", "email", "role"],
+      "properties": {
+        "name": { "type": "string", "example": "Aarav Patil" },
+        "email": { "type": "string", "example": "aarav@example.com" },
+        "role": { "type": "string", "example": "student" },
+        "active": { "type": "boolean", "example": true }
+      }
+    }
+  }
+}

@@ -105,6 +105,303 @@ const DEFAULT_MOCK_ROUTES: MockRoute[] = [
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   },
+  {
+    id: 'mock_route_demo_users_get',
+    name: 'Get All Users (Demo)',
+    description: 'Retrieve users list for User Management scenario',
+    method: 'GET',
+    path: '/api/users',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: [
+      {
+        id: 101,
+        name: 'Aarav Patil',
+        email: 'aarav@example.com',
+        role: 'student',
+        active: true,
+      },
+    ],
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['User Management'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_demo_user_get_single',
+    name: 'Get Single User (Demo)',
+    description: 'Retrieve one user by ID (101)',
+    method: 'GET',
+    path: '/api/users/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      id: 101,
+      name: 'Aarav Patil',
+      email: 'aarav@example.com',
+      role: 'student',
+      active: true,
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['User Management'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_demo_user_post',
+    name: 'Create User (Demo)',
+    description: 'Create a new user',
+    method: 'POST',
+    path: '/api/users',
+    statusCode: 201,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      id: 101,
+      name: 'Aarav Patil',
+      email: 'aarav@example.com',
+      role: 'student',
+      active: true,
+      created: true,
+    },
+    contentType: 'application/json',
+    delayMs: 15,
+    enabled: true,
+    tags: ['User Management'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_demo_user_put',
+    name: 'Update User (Demo)',
+    description: 'Update user 101 details',
+    method: 'PUT',
+    path: '/api/users/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      id: 101,
+      name: 'Aarav Patil',
+      email: 'aarav@example.com',
+      role: 'student',
+      active: true,
+      updated: true,
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['User Management'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_demo_user_delete',
+    name: 'Delete User (Demo)',
+    description: 'Delete user 101',
+    method: 'DELETE',
+    path: '/api/users/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      success: true,
+      message: 'User 101 deleted successfully',
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['User Management'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_products_get',
+    name: 'List Products (QuickCart Demo)',
+    description: 'Returns catalog of products for QuickCart E-Commerce scenario',
+    method: 'GET',
+    path: '/api/products',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: [
+      {
+        id: 201,
+        title: 'UltraBook Pro 15',
+        price: 1299.99,
+        category: 'electronics',
+        inStock: true,
+        rating: 4.8,
+      },
+      {
+        id: 202,
+        title: 'Noise Cancelling Headphones',
+        price: 199.5,
+        category: 'electronics',
+        inStock: true,
+        rating: 4.6,
+      },
+      {
+        id: 203,
+        title: 'Wireless Gaming Mouse',
+        price: 59.99,
+        category: 'electronics',
+        inStock: true,
+        rating: 5.0,
+      },
+    ],
+    contentType: 'application/json',
+    delayMs: 15,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_product_get_single',
+    name: 'Get Product By ID (QuickCart Demo)',
+    description: 'Returns product details for ID 201',
+    method: 'GET',
+    path: '/api/products/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      id: 201,
+      title: 'UltraBook Pro 15',
+      price: 1299.99,
+      category: 'electronics',
+      inStock: true,
+      rating: 4.8,
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_product_post',
+    name: 'Create Product (QuickCart Demo)',
+    description: 'Adds a new product to inventory',
+    method: 'POST',
+    path: '/api/products',
+    statusCode: 201,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      id: 203,
+      title: 'Wireless Gaming Mouse',
+      price: 59.99,
+      category: 'electronics',
+      inStock: true,
+      rating: 5.0,
+    },
+    contentType: 'application/json',
+    delayMs: 15,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_order_post',
+    name: 'Create Order (QuickCart Demo)',
+    description: 'Creates checkout order',
+    method: 'POST',
+    path: '/api/orders',
+    statusCode: 201,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      orderId: 'ORD-9021',
+      customerEmail: 'customer@example.com',
+      totalAmount: 1299.99,
+      status: 'confirmed',
+      createdAt: new Date().toISOString(),
+    },
+    contentType: 'application/json',
+    delayMs: 20,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_order_get_single',
+    name: 'Get Order By ID (QuickCart Demo)',
+    description: 'Retrieves order status by reference',
+    method: 'GET',
+    path: '/api/orders/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      orderId: 'ORD-9021',
+      customerEmail: 'customer@example.com',
+      totalAmount: 1299.99,
+      status: 'confirmed',
+      createdAt: new Date().toISOString(),
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_order_delete',
+    name: 'Cancel Order (QuickCart Demo)',
+    description: 'Cancels order ORD-9021',
+    method: 'DELETE',
+    path: '/api/orders/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      success: true,
+      message: 'Order ORD-9021 cancelled successfully',
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
+  {
+    id: 'mock_route_ecommerce_product_put',
+    name: 'Update Product Stock (QuickCart Demo)',
+    description: 'Updates inventory and price for product',
+    method: 'PUT',
+    path: '/api/products/:id',
+    statusCode: 200,
+    headers: { 'Content-Type': 'application/json' },
+    body: {
+      id: 201,
+      title: 'UltraBook Pro 15',
+      price: 899.99,
+      category: 'electronics',
+      inStock: true,
+      stock: 45,
+      updated: true,
+    },
+    contentType: 'application/json',
+    delayMs: 10,
+    enabled: true,
+    tags: ['QuickCart E-Commerce'],
+    source: 'MANUAL',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  },
 ];
 
 export class MockServerService {
@@ -279,6 +576,20 @@ export class MockServerService {
       }
     }
 
+    // 3. Fallback: try matching with or without /api prefix for maximum flexibility
+    const altIncoming = normIncoming.startsWith('/api/')
+      ? this.normalizePath(normIncoming.slice(4))
+      : this.normalizePath(`/api${normIncoming}`);
+
+    const altExactMatch = enabledRoutes.find((r) => this.normalizePath(r.path) === altIncoming);
+    if (altExactMatch) return altExactMatch;
+
+    for (const route of enabledRoutes) {
+      if (this.isPathMatch(route.path, altIncoming)) {
+        return route;
+      }
+    }
+
     return undefined;
   }
 
@@ -302,9 +613,13 @@ export class MockServerService {
     const urlObj = new URL(rawUrl, 'http://localhost');
     let targetPath = urlObj.pathname;
 
-    // Strip mock server base prefix if present (/api/mock/serve)
+    // Strip mock server base prefix if present (/api/mock/serve, /mock/serve, /serve)
     if (targetPath.startsWith('/api/mock/serve')) {
       targetPath = targetPath.slice('/api/mock/serve'.length) || '/';
+    } else if (targetPath.startsWith('/mock/serve')) {
+      targetPath = targetPath.slice('/mock/serve'.length) || '/';
+    } else if (targetPath.startsWith('/serve')) {
+      targetPath = targetPath.slice('/serve'.length) || '/';
     }
 
     const matchedRoute = this.matchRoute(method, targetPath);
