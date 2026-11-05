@@ -185,7 +185,7 @@ export class GoogleAiProvider implements AiProvider {
   private readonly model: string;
   private readonly fallbackProvider: MockAiProvider;
 
-  constructor(apiKey: string, model = 'gemini-3.5-flash') {
+  constructor(apiKey: string, model = 'gemini-2.5-flash') {
     if (!apiKey) throw new Error('GoogleAiProvider: GEMINI_API_KEY is required.');
     this.#apiKey = apiKey;
     this.model = model;
@@ -612,7 +612,7 @@ export function createAiProvider(): AiProvider {
 
   if (providerEnv === 'google-gemini') {
     const apiKey = process.env.GEMINI_API_KEY ?? '';
-    const model = process.env.GEMINI_MODEL ?? 'gemini-3.5-flash';
+    const model = process.env.GEMINI_MODEL ?? 'gemini-2.5-flash';
     return new GoogleAiProvider(apiKey, model);
   }
 

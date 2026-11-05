@@ -34,7 +34,9 @@ export class AiSettingsController {
       res.status(401).json({ error: { message: 'Authentication required' } });
       return;
     }
-    const apiKey = (req.body as { apiKey?: unknown } | undefined)?.apiKey;
+    const body = req.body as { apiKey?: unknown; model?: unknown } | undefined;
+    const apiKey = body?.apiKey;
+    const model = typeof body?.model === 'string' && /^[A-Za-z0-9._-]{1,80}$/.test(body.model.trim()) ? body.model.trim() : undefined;
     try {
       AiCredentialStore.assertKeyFormat(apiKey);
     } catch (error) {

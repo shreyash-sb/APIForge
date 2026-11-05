@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL } from '@/config/api';
+import { getApiBaseUrl } from '../config/api';
 import { formatApiErrorMessage } from './apiError';
 
 /**
@@ -25,7 +25,7 @@ export class AiSettingsApiError extends Error {
   }
 }
 
-const url = (path = '') => `${API_BASE_URL}/api/ai-settings${path}`;
+const url = (path = '') => `${getApiBaseUrl()}/api/ai-settings${path}`;
 
 function toError(error: unknown, fallback: string): AiSettingsApiError {
   const status = axios.isAxiosError(error) ? (error.response?.data as { status?: AiKeyStatus } | undefined)?.status : undefined;
