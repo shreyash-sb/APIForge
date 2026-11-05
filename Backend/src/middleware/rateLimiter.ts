@@ -5,7 +5,8 @@ export const apiRateLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15-minute window
   max: 100, // Limit each IP/user to 100 requests per windowMs
   standardHeaders: true, // Return standard `RateLimit-*` headers
-  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+  legacyHeaders: false,
+  validate: { xForwardedForHeader: false, trustProxy: false }, // Disable the `X-RateLimit-*` headers
   keyGenerator: (req: Request): string => {
     // Rate limit per authenticated user if available, otherwise fallback to normalized IP
     const user = (req as Request & { user?: { id?: string } }).user;
@@ -38,6 +39,7 @@ export const aiRequestRateLimiter = rateLimit({
   limit: 30,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, trustProxy: false },
   keyGenerator: aiUserKey,
   handler: aiLimitHandler('Too many AI requests. Please wait a minute before retrying.'),
 });
@@ -48,6 +50,7 @@ export const aiKeyRateLimiter = rateLimit({
   limit: 20,
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, trustProxy: false },
   keyGenerator: aiUserKey,
   handler: aiLimitHandler('Too many Gemini key changes or tests. Please wait before trying again.'),
 });
@@ -70,6 +73,7 @@ export const authLoginRateLimiter = rateLimit({
   limit: envLimit('AUTH_LOGIN_RATE_LIMIT', 30),
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, trustProxy: false },
   handler: authLimitHandler('Too many sign-in attempts from this network. Please wait 15 minutes and try again.'),
 });
 
@@ -79,5 +83,6 @@ export const authSignupRateLimiter = rateLimit({
   limit: envLimit('AUTH_SIGNUP_RATE_LIMIT', 20),
   standardHeaders: true,
   legacyHeaders: false,
+  validate: { xForwardedForHeader: false, trustProxy: false },
   handler: authLimitHandler('Too many accounts created from this network. Please try again later.'),
 });

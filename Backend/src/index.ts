@@ -49,10 +49,12 @@ const isDev = process.env.NODE_ENV !== 'production';
 
 // Only trust X-Forwarded-For when explicitly deployed behind a known reverse proxy
 // (e.g. TRUST_PROXY=1 or TRUST_PROXY=loopback, or production platforms like Railway).
+// Trust reverse proxy hops (Railway, Render, Cloudflare)
 if (process.env.TRUST_PROXY) {
   const value = process.env.TRUST_PROXY.trim();
   app.set('trust proxy', /^\d+$/.test(value) ? Number(value) : value === 'true' ? true : value);
-} else if (!isDev) {
+} else {
+  // Always trust the immediate edge proxy (Railway container ingress)
   app.set('trust proxy', 1);
 }
 

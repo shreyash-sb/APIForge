@@ -9,6 +9,11 @@ import type {
 import { formatApiErrorMessage } from './apiError';
 import { API_BASE_URL } from '../config/api';
 
+const getBaseUrl = () =>
+  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
+  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
+  API_BASE_URL;
+
 export class MockServerApiError extends Error {
   constructor(message: string) {
     super(message);
@@ -23,7 +28,7 @@ export const mockServerService = {
   async getRoutes(): Promise<MockRoute[]> {
     try {
       const response = await axios.get<{ routes: MockRoute[]; total: number }>(
-        `${API_BASE_URL}/api/mock/routes`,
+        `${getBaseUrl()}/api/mock/routes`,
         { timeout: 10000 }
       );
       return response.data.routes;
@@ -40,7 +45,7 @@ export const mockServerService = {
   async createRoute(routeData: Omit<MockRoute, 'id'>): Promise<MockRoute> {
     try {
       const response = await axios.post<MockRoute>(
-        `${API_BASE_URL}/api/mock/routes`,
+        `${getBaseUrl()}/api/mock/routes`,
         routeData,
         { timeout: 10000 }
       );
@@ -56,7 +61,7 @@ export const mockServerService = {
   async updateRoute(id: string, updates: Partial<MockRoute>): Promise<MockRoute> {
     try {
       const response = await axios.put<MockRoute>(
-        `${API_BASE_URL}/api/mock/routes/${id}`,
+        `${getBaseUrl()}/api/mock/routes/${id}`,
         updates,
         { timeout: 10000 }
       );
@@ -73,7 +78,7 @@ export const mockServerService = {
    */
   async deleteRoute(id: string): Promise<boolean> {
     try {
-      await axios.delete(`${API_BASE_URL}/api/mock/routes/${id}`, { timeout: 10000 });
+      await axios.delete(`${getBaseUrl()}/api/mock/routes/${id}`, { timeout: 10000 });
       return true;
     } catch (error) {
       throw new MockServerApiError(
@@ -91,7 +96,7 @@ export const mockServerService = {
   ): Promise<MockGenerateResult> {
     try {
       const response = await axios.post<MockGenerateResult>(
-        `${API_BASE_URL}/api/mock/generate-from-spec`,
+        `${getBaseUrl()}/api/mock/generate-from-spec`,
         { specification, options },
         { timeout: 20000 }
       );
@@ -112,7 +117,7 @@ export const mockServerService = {
   async getLogs(): Promise<MockRequestLog[]> {
     try {
       const response = await axios.get<{ logs: MockRequestLog[]; total: number }>(
-        `${API_BASE_URL}/api/mock/logs`,
+        `${getBaseUrl()}/api/mock/logs`,
         { timeout: 10000 }
       );
       return response.data.logs;
@@ -128,7 +133,7 @@ export const mockServerService = {
    */
   async clearLogs(): Promise<boolean> {
     try {
-      await axios.delete(`${API_BASE_URL}/api/mock/logs`, { timeout: 10000 });
+      await axios.delete(`${getBaseUrl()}/api/mock/logs`, { timeout: 10000 });
       return true;
     } catch (error) {
       throw new MockServerApiError(
