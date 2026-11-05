@@ -200,6 +200,18 @@ export function WorkflowsPage() {
           if (activeWorkflow) deleteWorkflow(activeWorkflow.id);
         }}
       />
+      <ConfirmDialog
+        open={confirmResetWorkflows}
+        title="Reset all workflows?"
+        message="Are you sure you want to reset all workflows? This will clear stale or demo workflows and generate a clean workflow scenario from your active specification."
+        confirmLabel="Reset workflows"
+        destructive
+        onCancel={() => setConfirmResetWorkflows(false)}
+        onConfirm={() => {
+          setConfirmResetWorkflows(false);
+          resetWorkflows();
+        }}
+      />
       {pageError && (
         <div role="alert" className="flex items-start justify-between gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-xs font-medium text-rose-700">
           <span>{pageError}</span>

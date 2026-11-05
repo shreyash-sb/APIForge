@@ -37,7 +37,7 @@ export function JsonGeneratorPage() {
       setText('');
       setMessage('');
     }
-  }, [specification?.id, specification?.metadata?.title, schemas]);
+  }, [specification?.metadata?.title, specification?.metadata?.version, schemas]);
 
 
   const format = () => {

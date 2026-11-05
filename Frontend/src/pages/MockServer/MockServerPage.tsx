@@ -303,9 +303,9 @@ export function MockServerPage() {
     <div className="space-y-5">
       <ConfirmDialog
         open={confirmClearAllRoutes}
-        title="Clear All Mock Routes"
-        description="Are you sure you want to delete all mock routes? This will remove all mock endpoints from the mock server."
-        confirmText="Clear All Routes"
+        title="Clear all mock routes?"
+        message="Are you sure you want to delete all mock routes? This will remove all mock endpoints from the mock server."
+        confirmLabel="Clear all routes"
         destructive
         onCancel={() => setConfirmClearAllRoutes(false)}
         onConfirm={handleClearAllRoutes}
