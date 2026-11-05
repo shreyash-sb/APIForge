@@ -264,13 +264,13 @@ export class RequestExecutorService {
     // Add authentication headers
     // Credentials are only sent when actually provided: an empty "Bearer " or a blank
     // header name is never a meaningful request (and a blank name makes fetch throw).
-    if (request.auth.type === 'bearer') {
+    if (request.auth?.type === 'bearer') {
       if (request.auth.token?.trim()) headers['Authorization'] = `Bearer ${request.auth.token.trim()}`;
-    } else if (request.auth.type === 'apikey' && request.auth.addTo === 'header') {
+    } else if (request.auth?.type === 'apikey' && request.auth.addTo === 'header') {
       if (request.auth.key?.trim()) headers[request.auth.key.trim()] = request.auth.value ?? '';
-    } else if (request.auth.type === 'basic' && (request.auth.username || request.auth.password)) {
+    } else if (request.auth?.type === 'basic' && (request.auth.username || request.auth.password)) {
       const credentials = Buffer.from(
-        `${request.auth.username}:${request.auth.password}`
+        `${request.auth.username ?? ''}:${request.auth.password ?? ''}`
       ).toString('base64');
       headers['Authorization'] = `Basic ${credentials}`;
     }
