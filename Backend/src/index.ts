@@ -103,6 +103,26 @@ app.use('/api/auth/signup', authSignupRateLimiter);
 app.use('/api/auth', authRoutes);
 app.use('/api/collections', requireAuth, collectionRoutes);
 
+// Root status endpoint
+app.get('/', (req, res) => {
+  res.json({
+    name: 'APIForge Backend API',
+    status: 'online',
+    version: '1.0.0',
+    documentation: 'https://github.com/shreyash-sb/APIForge',
+    healthCheck: '/health',
+    endpoints: {
+      health: '/health',
+      mockServe: '/api/mock/serve',
+      auth: '/api/auth',
+      collections: '/api/collections',
+      requests: '/api/requests',
+      workflows: '/api/workflows',
+      openapi: '/api/openapi',
+    },
+  });
+});
+
 // Health check
 app.get('/health', (req, res) => {
   res.json({
