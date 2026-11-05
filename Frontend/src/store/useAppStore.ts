@@ -714,9 +714,9 @@ export const useAppStore = create<AppState>()(
       mockRoutes: [],
       activeMockRouteId: undefined,
       mockLogs: [],
-      setMockRoutes: (mockRoutes) => set({ mockRoutes }),
+      setMockRoutes: (mockRoutes) => set({ mockRoutes: Array.isArray(mockRoutes) ? mockRoutes : [] }),
       setActiveMockRouteId: (activeMockRouteId) => set({ activeMockRouteId }),
-      setMockLogs: (mockLogs) => set({ mockLogs }),
+      setMockLogs: (mockLogs) => set({ mockLogs: Array.isArray(mockLogs) ? mockLogs : [] }),
 
       // Notification Management
       notifications: defaultNotifications,
@@ -807,6 +807,8 @@ export const useAppStore = create<AppState>()(
         delete existing.activeAgentTaskId;
         return {
           ...existing,
+          mockRoutes: Array.isArray(existing.mockRoutes) ? existing.mockRoutes : [],
+          mockLogs: Array.isArray(existing.mockLogs) ? existing.mockLogs : [],
           requestTimeoutMs: clampRequestTimeout(existing.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS),
           notifications: (existing.notifications ?? defaultNotifications).filter(
             (notification) => notification.actionLabel !== 'Agent Workspace' && notification.title !== 'Agent Engine Online'
@@ -831,9 +833,9 @@ export const useAppStore = create<AppState>()(
         workflows: sanitizeWorkflows(state.workflows),
         activeWorkflowId: state.activeWorkflowId,
         workflowExecutionResult: state.workflowExecutionResult,
-        mockRoutes: state.mockRoutes,
+        mockRoutes: Array.isArray(state.mockRoutes) ? state.mockRoutes : [],
         activeMockRouteId: state.activeMockRouteId,
-        mockLogs: state.mockLogs.slice(-50),
+        mockLogs: Array.isArray(state.mockLogs) ? state.mockLogs.slice(-50) : [],
         notifications: state.notifications.slice(0, 30),
         workspaceOwnerId: state.workspaceOwnerId,
       }),
@@ -843,6 +845,9 @@ export const useAppStore = create<AppState>()(
             '[APIForge Store] Storage rehydration encountered an error, falling back to clean workspace state:',
             error
           );
+        } else if (state) {
+          if (!Array.isArray(state.mockRoutes)) state.mockRoutes = [];
+          if (!Array.isArray(state.mockLogs)) state.mockLogs = [];
         }
       },
     }

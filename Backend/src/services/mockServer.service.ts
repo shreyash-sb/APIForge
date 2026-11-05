@@ -121,7 +121,7 @@ export class MockServerService {
    * Returns all registered mock routes
    */
   getRoutes(ownerUserId: string): MockRoute[] {
-    return Array.from(this.routes.values()).filter((route) => route.ownerUserId === ownerUserId);
+    return Array.from(this.routes.values()).filter((route) => !route.ownerUserId || route.ownerUserId === ownerUserId);
   }
 
   /**
@@ -129,7 +129,8 @@ export class MockServerService {
    */
   getRouteById(id: string, ownerUserId: string): MockRoute | undefined {
     const route = this.routes.get(id);
-    return route?.ownerUserId === ownerUserId ? route : undefined;
+    if (!route) return undefined;
+    return !route.ownerUserId || route.ownerUserId === ownerUserId ? route : undefined;
   }
 
   /**

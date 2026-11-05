@@ -78,6 +78,9 @@ export function MockServerPage() {
   // Log Inspection Modal
   const [selectedLog, setSelectedLog] = useState<MockRequestLog | null>(null);
 
+  const routesList = Array.isArray(mockRoutes) ? mockRoutes : [];
+  const logsList = Array.isArray(mockLogs) ? mockLogs : [];
+
   const mockBaseUrl = getMockServeBaseUrl();
 
   const loadRoutesAndLogs = useCallback(async () => {
@@ -200,7 +203,7 @@ export function MockServerPage() {
     setPendingDelete(null);
     try {
       await mockServerService.deleteRoute(id);
-      setMockRoutes(mockRoutes.filter((r) => r.id !== id));
+      setMockRoutes(routesList.filter((r) => r.id !== id));
       setSuccessMsg(`Mock route '${path}' deleted.`);
       setTimeout(() => setSuccessMsg(null), 3000);
     } catch (err) {
@@ -257,7 +260,7 @@ export function MockServerPage() {
       setError('No mock routes available to export. Create or generate mock routes first.');
       return;
     }
-    const spec = exportMockRoutesToOpenApi(mockRoutes, {
+    const spec = exportMockRoutesToOpenApi(routesList, {
       title: 'APIForge Mock Server API',
       version: '1.0.0',
       description: 'OpenAPI 3.1 specification generated from active APIForge mock routes',
@@ -268,11 +271,14 @@ export function MockServerPage() {
     setTimeout(() => setSuccessMsg(null), 4000);
   };
 
-  const filteredRoutes = mockRoutes.filter((r) => {
-    const matchesMethod = methodFilter === 'ALL' || r.method.toUpperCase() === methodFilter;
-    const matchesQuery =
-      r.path.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.name.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredRoutes = routesList.filter((r) => {
+    if (!r) return false;
+    const methodStr = (r.method || 'GET').toUpperCase();
+    const matchesMethod = methodFilter === 'ALL' || methodStr === methodFilter;
+    const pathStr = (r.path || '').toLowerCase();
+    const nameStr = (r.name || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
+    const matchesQuery = pathStr.includes(query) || nameStr.includes(query);
     return matchesMethod && matchesQuery;
   });
 
@@ -332,7 +338,7 @@ export function MockServerPage() {
               variant="outline"
               size="sm"
               onClick={handleExportOpenApi}
-              disabled={mockRoutes.length === 0}
+              disabled={routesList.length === 0}
               className="gap-1.5 bg-sky-50 text-sky-700 border-sky-200 hover:bg-sky-100"
               title="Export all mock routes to OpenAPI 3.1 JSON"
             >
@@ -386,7 +392,7 @@ export function MockServerPage() {
             }`}
           >
             <Layers className="h-4 w-4" />
-            Mock Routes ({mockRoutes.length})
+            Mock Routes ({routesList.length})
           </button>
           <button
             type="button"
@@ -398,7 +404,7 @@ export function MockServerPage() {
             }`}
           >
             <Clock className="h-4 w-4" />
-            Traffic Logs ({mockLogs.length})
+            Traffic Logs ({logsList.length})
           </button>
         </div>
 
@@ -427,7 +433,7 @@ export function MockServerPage() {
             </select>
           </div>
         ) : (
-          mockLogs.length > 0 && (
+          logsList.length > 0 && (
             <Button variant="ghost" size="sm" onClick={handleClearLogs} className="text-rose-600 gap-1 hover:bg-rose-50">
               <Trash2 className="h-3.5 w-3.5" /> Clear Logs
             </Button>
@@ -545,7 +551,7 @@ export function MockServerPage() {
       {/* Tab 2: Traffic Logs */}
       {activeTab === 'logs' && (
         <div className="space-y-4">
-          {mockLogs.length > 0 ? (
+          {logsList.length > 0 ? (
             <div className="panel-surface overflow-hidden border border-slate-200/80 bg-white">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs">
@@ -561,10 +567,10 @@ export function MockServerPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100">
-                    {mockLogs.map((log) => (
+                    {logsList.map((log) => (
                       <tr key={log.id} className="hover:bg-slate-50/70 transition-colors">
                         <td className="p-3 font-mono text-slate-500">
-                          {new Date(log.timestamp).toLocaleTimeString()}
+                          {log.timestamp ? new Date(log.timestamp).toLocaleTimeString() : 'N/A'}
                         </td>
                         <td className="p-3">
                           <span

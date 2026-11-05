@@ -31,7 +31,7 @@ export const mockServerService = {
         `${getBaseUrl()}/api/mock/routes`,
         { timeout: 10000 }
       );
-      return response.data.routes;
+      return Array.isArray(response.data?.routes) ? response.data.routes : [];
     } catch (error) {
       throw new MockServerApiError(
         formatApiErrorMessage(error, 'Failed to fetch mock routes. Check backend connectivity.')
@@ -120,7 +120,7 @@ export const mockServerService = {
         `${getBaseUrl()}/api/mock/logs`,
         { timeout: 10000 }
       );
-      return response.data.logs;
+      return Array.isArray(response.data?.logs) ? response.data.logs : [];
     } catch (error) {
       throw new MockServerApiError(
         formatApiErrorMessage(error, 'Failed to fetch mock execution logs.')
