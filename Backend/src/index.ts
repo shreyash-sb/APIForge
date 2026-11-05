@@ -71,8 +71,12 @@ app.use(cors({
     if (allowedOrigins.some((allowed) => allowed.startsWith('*.') && normalizedOrigin.endsWith(allowed.slice(1)))) {
       return callback(null, true);
     }
-    // In development mode, allow any localhost or 127.0.0.1 port to support dynamic Vite ports (e.g. 5175)
-    if (isDev && /^http:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(normalizedOrigin)) {
+    // Automatically allow any Vercel domain (*.vercel.app)
+    if (normalizedOrigin.endsWith('.vercel.app') || /^https:\/\/[a-zA-Z0-9_.-]+\.vercel\.app$/.test(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    // Allow localhost / 127.0.0.1 (supports local frontend connecting to Railway backend)
+    if (/^http:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(normalizedOrigin)) {
       return callback(null, true);
     }
     return callback(null, false);
