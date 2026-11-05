@@ -862,7 +862,7 @@ export class WorkflowEngineService {
       if (
         lowerKey === 'authorization' ||
         lowerKey === 'x-api-key' ||
-        (request.auth.type === 'apikey' &&
+        (request.auth?.type === 'apikey' &&
           request.auth.addTo === 'header' &&
           lowerKey === request.auth.key.toLowerCase())
       ) {
@@ -877,7 +877,7 @@ export class WorkflowEngineService {
     const sanitizedQueryParams: QueryParam[] = (request.queryParams ?? []).map((param) => {
       const lowerKey = param.key.toLowerCase();
       if (
-        (request.auth.type === 'apikey' &&
+        (request.auth?.type === 'apikey' &&
           request.auth.addTo === 'query' &&
           lowerKey === request.auth.key.toLowerCase()) ||
         lowerKey.includes('apikey') ||
@@ -898,7 +898,7 @@ export class WorkflowEngineService {
       const parsedUrl = new URL(request.url);
       let modified = false;
 
-      if (request.auth.type === 'apikey' && request.auth.addTo === 'query' && request.auth.key) {
+      if (request.auth?.type === 'apikey' && request.auth.addTo === 'query' && request.auth.key) {
         if (parsedUrl.searchParams.has(request.auth.key)) {
           parsedUrl.searchParams.set(request.auth.key, '[REDACTED]');
           modified = true;

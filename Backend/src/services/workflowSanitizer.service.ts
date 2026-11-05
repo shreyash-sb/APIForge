@@ -170,12 +170,12 @@ export class WorkflowSanitizerService {
         headers: interpolatedRequest.headers,
         body: interpolatedRequest.body,
         auth: {
-          type: interpolatedRequest.auth.type,
-          redacted: interpolatedRequest.auth.type !== 'none',
+          type: interpolatedRequest.auth?.type,
+          redacted: interpolatedRequest.auth?.type !== 'none',
           description:
-            interpolatedRequest.auth.type === 'none'
+            interpolatedRequest.auth?.type === 'none'
               ? 'None'
-              : `${interpolatedRequest.auth.type.toUpperCase()} [REDACTED]`,
+              : `${interpolatedRequest.auth?.type.toUpperCase()} [REDACTED]`,
         },
       },
       secrets
