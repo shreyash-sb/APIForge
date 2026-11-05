@@ -72,6 +72,116 @@ export const defaultEnvironments: FrontendEnvironmentProfile[] = [
   },
 ];
 
+/**
+ * Generates an end-to-end integration workflow scenario from an imported OpenAPI specification
+ */
+export function createWorkflowFromSpecification(spec: ApiSpecification): WorkflowScenario {
+  const title = spec.metadata?.title || 'API';
+  const endpoints = spec.endpoints || [];
+  const steps: WorkflowScenario['steps'] = [];
+
+  // Step 1: POST endpoint (create or auth) or first endpoint
+  const postEndpoint = endpoints.find((e) => e.method === 'POST') || endpoints[0];
+  if (postEndpoint) {
+    const isAuth = /login|auth|token|sign/i.test(postEndpoint.path);
+    steps.push({
+      id: `step-${postEndpoint.method.toLowerCase()}-1`,
+      name: `1. ${postEndpoint.summary || `${postEndpoint.method} ${postEndpoint.path}`}`,
+      description: postEndpoint.description || `Submit request to ${postEndpoint.path}`,
+      enabled: true,
+      request: {
+        method: postEndpoint.method as any,
+        url: `{{baseUrl}}${postEndpoint.path}`,
+        headers: [{ id: 'h1', key: 'Content-Type', value: 'application/json', enabled: true }],
+        queryParams: [],
+        body: postEndpoint.requestBody?.content?.[0]?.example
+          ? JSON.stringify(postEndpoint.requestBody.content[0].example, null, 2)
+          : '{\n  "status": "active"\n}',
+        auth: { type: 'none' },
+      },
+      extractors: [
+        {
+          targetVariable: isAuth ? 'sessionToken' : 'createdId',
+          source: 'BODY_JSONPATH',
+          path: isAuth ? '$.token' : '$.id',
+          defaultValue: isAuth ? '' : '1',
+          isSecret: isAuth,
+        },
+      ],
+    });
+  }
+
+  // Step 2: GET endpoint
+  const getEndpoint = endpoints.find((e) => e.method === 'GET' && e !== postEndpoint);
+  if (getEndpoint) {
+    const hasParam = getEndpoint.path.includes('{');
+    const paramUrl = getEndpoint.path.replace(/\{([^}]+)\}/g, '{{createdId}}');
+    steps.push({
+      id: 'step-get-2',
+      name: `2. ${getEndpoint.summary || `GET ${getEndpoint.path}`}`,
+      description: getEndpoint.description || `Retrieve details from ${getEndpoint.path}`,
+      enabled: true,
+      dependsOn: steps.length > 0 ? [steps[0].id] : undefined,
+      request: {
+        method: 'GET',
+        url: `{{baseUrl}}${hasParam ? paramUrl : getEndpoint.path}`,
+        headers: [{ id: 'h2', key: 'Accept', value: 'application/json', enabled: true }],
+        queryParams: [],
+        body: '',
+        auth: { type: 'none' },
+      },
+    });
+  }
+
+  // Step 3: PUT / PATCH endpoint
+  const putEndpoint = endpoints.find((e) => (e.method === 'PUT' || e.method === 'PATCH') && e !== postEndpoint);
+  if (putEndpoint) {
+    const paramUrl = putEndpoint.path.replace(/\{([^}]+)\}/g, '{{createdId}}');
+    steps.push({
+      id: 'step-put-3',
+      name: `3. ${putEndpoint.summary || `${putEndpoint.method} ${putEndpoint.path}`}`,
+      description: putEndpoint.description || `Update resource at ${putEndpoint.path}`,
+      enabled: true,
+      dependsOn: steps.length > 1 ? [steps[1].id] : steps.length > 0 ? [steps[0].id] : undefined,
+      request: {
+        method: putEndpoint.method as any,
+        url: `{{baseUrl}}${paramUrl}`,
+        headers: [{ id: 'h3', key: 'Content-Type', value: 'application/json', enabled: true }],
+        queryParams: [],
+        body: '{\n  "updated": true\n}',
+        auth: { type: 'none' },
+      },
+    });
+  }
+
+  // Step 4: DELETE cleanup step
+  const deleteEndpoint = endpoints.find((e) => e.method === 'DELETE');
+  if (deleteEndpoint) {
+    const paramUrl = deleteEndpoint.path.replace(/\{([^}]+)\}/g, '{{createdId}}');
+    steps.push({
+      id: 'step-delete-4',
+      name: `4. Teardown Cleanup (${deleteEndpoint.method})`,
+      description: `Cleanup test resource at ${deleteEndpoint.path}`,
+      enabled: true,
+      isTeardown: true,
+      request: {
+        method: 'DELETE',
+        url: `{{baseUrl}}${paramUrl}`,
+        headers: [],
+        queryParams: [],
+        body: '',
+        auth: { type: 'none' },
+      },
+    });
+  }
+
+  return {
+    id: `wf-spec-${Date.now()}`,
+    name: `${title} End-to-End Workflow`,
+    description: `Automated integration scenario generated from ${title} (${endpoints.length} endpoints)`,
+    steps: steps.length > 0 ? steps : defaultWorkflows[0].steps,
+  };
+}
 export const defaultWorkflows: WorkflowScenario[] = [
   {
     id: 'wf-user-order-flow',
@@ -377,7 +487,9 @@ export type AppState = {
   createWorkflow: (workflow: Omit<WorkflowScenario, 'id'>) => string;
   updateWorkflow: (id: string, updates: Partial<WorkflowScenario>) => void;
   duplicateWorkflow: (id: string) => string | undefined;
-  deleteWorkflow: (id: string) => boolean;
+    deleteWorkflow: (id: string) => boolean;
+  generateWorkflowFromActiveSpecification: () => string | undefined;
+  resetWorkflows: () => void;
 
   workflowExecutionResult?: SanitizedWorkflowExecutionResult;
   setWorkflowExecutionResult: (result: SanitizedWorkflowExecutionResult | undefined) => void;
@@ -470,7 +582,31 @@ export const useAppStore = create<AppState>()(
       setSidebarOpen: (open) => set({ sidebarOpen: open }),
       toggleSidebar: () => set((state) => ({ sidebarOpen: !state.sidebarOpen })),
       setRequestDraft: (requestDraft) => set({ requestDraft }),
-      setActiveSpecification: (activeSpecification) => set({ activeSpecification }),
+      setActiveSpecification: (activeSpecification) => {
+        if (!activeSpecification) {
+          set({ activeSpecification: undefined });
+          return;
+        }
+        const currentWorkflows = get().workflows || [];
+        const isOnlyLegacyOrEmpty =
+          currentWorkflows.length === 0 ||
+          currentWorkflows.every((w) =>
+            w.id.includes('demo') ||
+            w.name.toLowerCase().includes('demo') ||
+            JSON.stringify(w).includes('Aarav Patil')
+          );
+
+        if (isOnlyLegacyOrEmpty) {
+          const newWorkflow = createWorkflowFromSpecification(activeSpecification);
+          set({
+            activeSpecification,
+            workflows: [newWorkflow],
+            activeWorkflowId: newWorkflow.id,
+          });
+        } else {
+          set({ activeSpecification });
+        }
+      },
       generatedTests: [],
       setGeneratedTests: (generatedTests) => set({ generatedTests }),
       executionResults: {},
@@ -613,6 +749,28 @@ export const useAppStore = create<AppState>()(
           activeEnvironmentId: newActiveId,
         });
         return true;
+      },
+      generateWorkflowFromActiveSpecification: () => {
+        const spec = get().activeSpecification;
+        if (!spec || !spec.endpoints || spec.endpoints.length === 0) return undefined;
+        const newWorkflow = createWorkflowFromSpecification(spec);
+        set((state) => ({
+          workflows: [newWorkflow, ...state.workflows.filter((w) => !JSON.stringify(w).includes('Aarav Patil'))],
+          activeWorkflowId: newWorkflow.id,
+          workflowExecutionResult: undefined,
+          workflowExecutionError: undefined,
+        }));
+        return newWorkflow.id;
+      },
+      resetWorkflows: () => {
+        const spec = get().activeSpecification;
+        const initial = spec ? [createWorkflowFromSpecification(spec)] : defaultWorkflows;
+        set({
+          workflows: initial,
+          activeWorkflowId: initial[0]?.id,
+          workflowExecutionResult: undefined,
+          workflowExecutionError: undefined,
+        });
       },
 
       // Phase 9 Workflow Scenarios & Execution
@@ -784,7 +942,7 @@ export const useAppStore = create<AppState>()(
     {
       name: 'apiforge-workspace',
       storage: safePersistStorage,
-      version: 3,
+      version: 4,
       migrate: (persistedState: unknown, version: number) => {
         if (version < 1 || !persistedState || typeof persistedState !== 'object') {
           return {
@@ -803,11 +961,23 @@ export const useAppStore = create<AppState>()(
         }
         // v3: the agent workspace was removed — drop its stored tasks and its notifications.
         const existing = { ...(persistedState as Partial<AppState> & { agentTasks?: unknown; activeAgentTaskId?: unknown }) };
+        // Purge legacy demo references (Aarav Patil / wf-user-management-demo)
+        let workflows = Array.isArray(existing.workflows) ? existing.workflows : defaultWorkflows;
+        workflows = workflows.filter((w) => !JSON.stringify(w).includes('Aarav Patil') && w.id !== 'wf-user-management-demo');
+        if (workflows.length === 0) workflows = defaultWorkflows;
+
+        let mockRoutes = Array.isArray(existing.mockRoutes) ? existing.mockRoutes : [];
+        mockRoutes = mockRoutes.filter((r) => !JSON.stringify(r).includes('Aarav Patil'));
+
+        let activeSpecification = existing.activeSpecification;
+        if (activeSpecification && JSON.stringify(activeSpecification).includes('Aarav Patil')) {
+          activeSpecification = undefined;
+        }
         delete existing.agentTasks;
         delete existing.activeAgentTaskId;
         return {
           ...existing,
-          mockRoutes: Array.isArray(existing.mockRoutes) ? existing.mockRoutes : [],
+          mockRoutes,
           mockLogs: Array.isArray(existing.mockLogs) ? existing.mockLogs : [],
           requestTimeoutMs: clampRequestTimeout(existing.requestTimeoutMs ?? DEFAULT_REQUEST_TIMEOUT_MS),
           notifications: (existing.notifications ?? defaultNotifications).filter(

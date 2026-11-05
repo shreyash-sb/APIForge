@@ -8,6 +8,8 @@ import {
   Loader2,
   Play,
   Plus,
+  RotateCcw,
+  Sparkles,
   ShieldCheck,
   Trash2,
   Workflow,
@@ -30,6 +32,9 @@ export function WorkflowsPage() {
     updateWorkflow,
     duplicateWorkflow,
     deleteWorkflow,
+    activeSpecification,
+    generateWorkflowFromActiveSpecification,
+    resetWorkflows,
     environments,
     activeEnvironmentId,
     setActiveEnvironmentId,
@@ -45,6 +50,7 @@ export function WorkflowsPage() {
   // Inline, dismissible feedback instead of a blocking browser alert() dialog.
   const [pageError, setPageError] = useState('');
   const [confirmDeleteWorkflow, setConfirmDeleteWorkflow] = useState(false);
+  const [confirmResetWorkflows, setConfirmResetWorkflows] = useState(false);
   const [validationResult, setValidationResult] = useState<{ valid: boolean; errors: string[] } | null>(null);
   const [validating, setValidating] = useState(false);
   const [previewModalOpen, setPreviewModalOpen] = useState(false);
@@ -215,6 +221,11 @@ export function WorkflowsPage() {
                 <span className="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-semibold text-slate-600">
                   {workflows.length} {workflows.length === 1 ? "scenario" : "scenarios"}
                 </span>
+                {activeSpecification && (
+                  <span className="rounded-full bg-violet-50 border border-violet-200 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
+                    Spec: {activeSpecification.metadata?.title || 'Active API'}
+                  </span>
+                )}
               </div>
               <p className="text-xs sm:text-sm text-slate-500 mt-0.5">
                 Multi-step API orchestration with automated variable chaining, data extractors, and assertions
@@ -285,6 +296,29 @@ export function WorkflowsPage() {
               className="gap-1.5 font-semibold text-slate-600 px-3"
             >
               <Copy className="h-3.5 w-3.5" /> Duplicate
+            </Button>
+            {activeSpecification && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const newId = generateWorkflowFromActiveSpecification();
+                  if (newId) setPageError("");
+                }}
+                className="gap-1.5 font-semibold text-violet-700 border-violet-200 hover:bg-violet-50 px-3"
+                title={`Generate workflow scenario from ${activeSpecification.metadata?.title || "active spec"}`}
+              >
+                <Sparkles className="h-3.5 w-3.5 text-violet-600" /> Generate from Spec
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setConfirmResetWorkflows(true)}
+              className="gap-1.5 font-semibold text-slate-600 border-slate-200 hover:bg-slate-50 px-3"
+              title="Reset workflows to clean defaults or active specification"
+            >
+              <RotateCcw className="h-3.5 w-3.5" /> Reset
             </Button>
             <Button
               variant="outline"

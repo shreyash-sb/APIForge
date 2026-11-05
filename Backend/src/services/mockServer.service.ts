@@ -187,6 +187,18 @@ export class MockServerService {
   }
 
   /**
+   * Clears all mock routes belonging to a user (or unowned demo routes)
+   */
+  clearAllRoutes(ownerUserId: string): boolean {
+    for (const [id, route] of this.routes.entries()) {
+      if (!route.ownerUserId || route.ownerUserId === ownerUserId) {
+        this.routes.delete(id);
+      }
+    }
+    return true;
+  }
+
+  /**
    * Resets mock routes to default state
    */
   resetRoutes(): void {
@@ -260,13 +272,17 @@ export class MockServerService {
   /**
    * Matches an incoming HTTP request against registered mock routes
    */
-  matchRoute(method: string, incomingPath: string): MockRoute | undefined {
+  matchRoute(method: string, incomingPath: string, ownerUserId?: string): MockRoute | undefined {
     const normIncoming = this.normalizePath(incomingPath);
     const upperMethod = method.toUpperCase();
 
-    const enabledRoutes = Array.from(this.routes.values()).filter(
+    const allMatching = Array.from(this.routes.values()).filter(
       (r) => r.enabled && r.method.toUpperCase() === upperMethod
     );
+    const userMatching = ownerUserId
+      ? allMatching.filter((r) => r.ownerUserId === ownerUserId)
+      : [];
+    const enabledRoutes = userMatching.length > 0 ? userMatching : allMatching;
 
     // 1. Exact path match first
     const exactMatch = enabledRoutes.find((r) => this.normalizePath(r.path) === normIncoming);
@@ -304,7 +320,8 @@ export class MockServerService {
     rawUrl: string,
     queryParams: Record<string, string>,
     headers: Record<string, string>,
-    body?: unknown
+    body?: unknown,
+    ownerUserId?: string
   ): Promise<{
     statusCode: number;
     headers: Record<string, string>;
@@ -325,7 +342,7 @@ export class MockServerService {
       targetPath = targetPath.slice('/serve'.length) || '/';
     }
 
-    const matchedRoute = this.matchRoute(method, targetPath);
+    const matchedRoute = this.matchRoute(method, targetPath, ownerUserId);
 
     let statusCode = 404;
     let responseHeaders: Record<string, string> = { 'Content-Type': 'application/json' };

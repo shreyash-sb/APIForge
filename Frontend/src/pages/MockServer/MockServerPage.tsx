@@ -195,6 +195,7 @@ export function MockServerPage() {
     }
   };
 
+  const [confirmClearAllRoutes, setConfirmClearAllRoutes] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<{ id: string; path: string } | null>(null);
   const handleDeleteRoute = (id: string, path: string) => setPendingDelete({ id, path });
   const confirmDeleteRoute = async () => {
@@ -211,6 +212,22 @@ export function MockServerPage() {
     }
   };
 
+  const handleClearAllRoutes = async () => {
+    setActionLoading(true);
+    setError(null);
+    try {
+      await mockServerService.clearAllRoutes();
+      setMockRoutes([]);
+      setSuccessMsg("All mock routes cleared successfully.");
+      await loadRoutesAndLogs();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to clear mock routes");
+    } finally {
+      setActionLoading(false);
+      setTimeout(() => setSuccessMsg(null), 4000);
+    }
+  };
+
   const handleGenerateFromSpec = async () => {
     if (!activeSpecification) {
       setError('No OpenAPI specification loaded. Please import a specification first.');
@@ -222,7 +239,7 @@ export function MockServerPage() {
     try {
       const res = await mockServerService.generateFromSpec(activeSpecification, {
         defaultDelayMs: 20,
-        overwriteExisting: false,
+        overwriteExisting: true,
       });
       setSuccessMsg(`Generated ${res.generatedCount} mock routes from OpenAPI specification.`);
       await loadRoutesAndLogs();
@@ -284,6 +301,15 @@ export function MockServerPage() {
 
   return (
     <div className="space-y-5">
+      <ConfirmDialog
+        open={confirmClearAllRoutes}
+        title="Clear All Mock Routes"
+        description="Are you sure you want to delete all mock routes? This will remove all mock endpoints from the mock server."
+        confirmText="Clear All Routes"
+        destructive
+        onCancel={() => setConfirmClearAllRoutes(false)}
+        onConfirm={handleClearAllRoutes}
+      />
       {/* Top Banner & Control Panel */}
       <section className="panel-surface p-4 sm:p-5 border border-slate-200/80 bg-white">
         <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
@@ -355,6 +381,19 @@ export function MockServerPage() {
               >
                 <Sparkles className="h-3.5 w-3.5 text-violet-600" />
                 Generate from OpenAPI Spec
+              </Button>
+            )}
+            {routesList.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setConfirmClearAllRoutes(true)}
+                disabled={actionLoading}
+                className="gap-1.5 text-rose-600 border-rose-200 hover:bg-rose-50"
+                title="Delete all mock routes"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Clear All
               </Button>
             )}
             <Button onClick={openCreateModal} size="sm" className="gap-1.5 shadow-sm">

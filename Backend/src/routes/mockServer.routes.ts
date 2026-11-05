@@ -41,6 +41,12 @@ router.delete('/routes/:id', (req, res) => {
   void controller.deleteRoute(req, res);
 });
 
+router.delete('/routes', (req, res) => {
+  void controller.clearAllRoutes(req, res);
+});
+
+
+
 router.post('/generate-from-spec', (req, res) => {
   void controller.generateFromSpec(req, res);
 });

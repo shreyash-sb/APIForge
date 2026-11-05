@@ -197,7 +197,18 @@ export class MockServerController {
   /**
    * DELETE /api/mock/logs - Clear mock request logs
    */
-  async clearLogs(_req: Request, res: Response): Promise<void> {
+    /**
+   * DELETE /api/mock/routes - Clear all mock routes for authenticated user
+   */
+  async clearAllRoutes(_req: Request, res: Response): Promise<void> {
+    try {
+      this.mockService.clearAllRoutes(this.authenticatedUserId(res));
+      res.status(200).json({ success: true, message: 'All mock routes cleared.' });
+    } catch {
+      res.status(500).json({ error: { message: 'Failed to clear mock routes.' } });
+    }
+  }
+async clearLogs(_req: Request, res: Response): Promise<void> {
     try {
       this.mockService.clearLogs(this.authenticatedUserId(res));
       res.status(200).json({ success: true, message: 'Mock logs cleared.' });
@@ -228,12 +239,14 @@ export class MockServerController {
         }
       }
 
+      const ownerUserId = res.locals?.authUser?.id as string | undefined;
       const result = await this.mockService.handleRequest(
         method,
         originalUrl,
         queryParams,
         headers,
-        req.body
+        req.body,
+        ownerUserId
       );
 
       // Set custom response headers

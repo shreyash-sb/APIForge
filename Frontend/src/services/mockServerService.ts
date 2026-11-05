@@ -85,6 +85,20 @@ export const mockServerService = {
   },
 
   /**
+   * Clears all mock routes
+   */
+  async clearAllRoutes(): Promise<boolean> {
+    try {
+      await axios.delete(`${getBaseUrl()}/api/mock/routes`, { timeout: 10000 });
+      return true;
+    } catch (error) {
+      throw new MockServerApiError(
+        formatApiErrorMessage(error, 'Failed to clear mock routes.')
+      );
+    }
+  },
+
+  /**
    * Generates mock routes from an OpenAPI Specification
    */
   async generateFromSpec(

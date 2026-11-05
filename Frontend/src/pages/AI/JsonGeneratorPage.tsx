@@ -1,5 +1,5 @@
 import { Copy, Download, Sparkles, Check, Code, FileUp } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
@@ -14,6 +14,31 @@ export function JsonGeneratorPage() {
 
   const schemas = useMemo(() => Object.entries(specification?.schemas ?? {}), [specification]);
   const selected = schemas.find(([name]) => name === schemaId)?.[1];
+
+  // Auto-select first schema from specification and clear old demo/stale payload
+  useEffect(() => {
+    if (schemas.length > 0) {
+      const exists = schemas.some(([name]) => name === schemaId);
+      if (!exists) {
+        const firstSchemaName = schemas[0][0];
+        setSchemaId(firstSchemaName);
+        const firstSchemaObj = schemas[0][1];
+        const res = generateJson(firstSchemaObj);
+        if (res.value !== undefined) {
+          setText(JSON.stringify(res.value, null, 2));
+          setMessage(`Loaded sample payload for '${firstSchemaName}'.`);
+        } else {
+          setText('');
+          setMessage('');
+        }
+      }
+    } else {
+      setSchemaId('');
+      setText('');
+      setMessage('');
+    }
+  }, [specification?.id, specification?.metadata?.title, schemas]);
+
 
   const format = () => {
     const result = formatJson(text);
@@ -75,7 +100,14 @@ export function JsonGeneratorPage() {
               <Sparkles className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight text-slate-900">JSON Payload Generator</h1>
+              <div className="flex items-center gap-2.5">
+                <h1 className="text-xl font-bold tracking-tight text-slate-900">JSON Payload Generator</h1>
+                {specification && (
+                  <span className="rounded-full bg-violet-50 border border-violet-200 px-2.5 py-0.5 text-xs font-semibold text-violet-700">
+                    Spec: {specification.metadata?.title || 'Active API'}
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-slate-500">
                 Deterministic sample generation from OpenAPI schemas; format and validate JSON payloads
               </p>
@@ -92,7 +124,18 @@ export function JsonGeneratorPage() {
                 aria-label="OpenAPI schema"
                 className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 shadow-xs"
                 value={schemaId}
-                onChange={(e) => setSchemaId(e.target.value)}
+                onChange={(e) => {
+                  const newId = e.target.value;
+                  setSchemaId(newId);
+                  const s = schemas.find(([name]) => name === newId)?.[1];
+                  if (s) {
+                    const res = generateJson(s);
+                    if (res.value !== undefined) {
+                      setText(JSON.stringify(res.value, null, 2));
+                      setMessage(`Generated sample payload for '${newId}'.`);
+                    }
+                  }
+                }}
               >
                 <option value="">Select a schema</option>
                 {schemas.map(([name]) => (
