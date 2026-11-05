@@ -83,7 +83,7 @@ export function GeminiKeyPanel() {
       setStatus(result);
       setEditing(false);
       setState('not-configured');
-      setMessage('Gemini key removed. AI features now run in mock/demo mode.');
+      setMessage('Gemini key removed. AI features now run in mock mode.');
     } catch (error) {
       setState(status?.configured ? 'configured' : 'not-configured');
       setMessage(error instanceof Error ? error.message : 'Unable to remove the key.');
@@ -126,7 +126,7 @@ export function GeminiKeyPanel() {
         <p>
           The key is sent once to the APIForge backend, kept in server memory for this sign-in session only, and is never shown
           again. It is cleared when you remove it or sign out, and must be re-entered in a new session. Without a key, AI features
-          run in clearly labelled mock/demo mode. Deterministic validation always remains the source of truth.
+          run in clearly labelled mock mode. Deterministic validation always remains the source of truth.
         </p>
       </div>
 

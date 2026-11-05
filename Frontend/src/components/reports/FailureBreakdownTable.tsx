@@ -10,7 +10,7 @@ export function describeDiagnosisSource(provider?: AiProviderName, providerStatu
   const status = providerStatus ?? (provider === 'google-gemini' ? 'live' : 'mock');
   if (status === 'live') return 'Gemini';
   if (status === 'fallback') return 'Fallback (Gemini unavailable)';
-  return 'Mock/demo';
+  return 'Mock';
 }
 
 const ineligibleLabel: Record<string, string> = {

@@ -84,7 +84,7 @@ describe('Reports “Diagnose failures”', () => {
     renderWithRouter(<ReportsPage />);
     await user.click(screen.getByRole('button', { name: /generate current-run report/i }));
     expect(generate.mock.calls[0][0].diagnosisResults).toEqual([]); // stale t3 diagnosis filtered out
-    expect(await screen.findByText(/Mock\/demo mode — no Gemini key configured/)).toBeInTheDocument();
+    expect(await screen.findByText(/Mock mode — no Gemini key configured/)).toBeInTheDocument();
     expect(screen.getAllByText('Not diagnosed')).toHaveLength(2);
 
     const before = JSON.stringify([useAppStore.getState().executionResults, useAppStore.getState().validationResults]);
@@ -100,8 +100,8 @@ describe('Reports “Diagnose failures”', () => {
     expect(JSON.stringify([useAppStore.getState().executionResults, useAppStore.getState().validationResults])).toBe(before);
 
     expect(await screen.findByText(/Diagnosed 2 of 2 eligible failure/)).toBeInTheDocument();
-    expect(screen.getByText(/Results are mock\/demo output/)).toBeInTheDocument();
-    expect(screen.getAllByText(/Mock\/demo · MEDIUM confidence/)).toHaveLength(2);
+    expect(screen.getByText(/Results are mock provider output/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Mock · MEDIUM confidence/)).toHaveLength(2);
     expect(screen.queryByText('STALE')).not.toBeInTheDocument();
     // Deterministic values stay visible.
     expect(screen.getByText('Expected 200 · Actual 404')).toBeInTheDocument();

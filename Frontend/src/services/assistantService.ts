@@ -13,5 +13,5 @@ export function describeAssistantProvider(reply: Pick<AssistantReply, 'provider'
   if (status === 'live') return 'Gemini (your key) · advisory';
   if (status === 'fallback') return `Gemini could not answer${reply.fallbackReason ? ` (${reply.fallbackReason})` : ''} · mock/deterministic fallback`;
   if (status === 'clarification') return 'APIForge follow-up question (no AI call)';
-  return 'Mock/demo (not a live LLM)';
+  return 'Mock (not a live LLM)';
 }

@@ -158,7 +158,7 @@ export function ReportsPage() {
       const sourceNote = sources.has('fallback')
         ? ' Some results are deterministic fallbacks because Gemini could not answer.'
         : sources.has('mock')
-          ? ' Results are mock/demo output (no Gemini key configured).'
+          ? ' Results are mock provider output (no Gemini key configured).'
           : '';
       const remaining = outcome.failedTestIds.length;
       setDiagnosisNotice(

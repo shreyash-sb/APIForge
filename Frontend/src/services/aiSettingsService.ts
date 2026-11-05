@@ -70,5 +70,5 @@ export const aiSettingsService = {
 /** Short label describing where AI output will come from. */
 export function describeAiMode(status: AiKeyStatus | undefined): string {
   if (!status) return 'AI provider status unavailable';
-  return status.configured ? `Gemini (your key ${status.keyHint ?? ''})`.trim() : 'Mock/demo mode — no Gemini key configured';
+  return status.configured ? `Gemini (your key ${status.keyHint ?? ''})`.trim() : 'Mock mode — no Gemini key configured';
 }

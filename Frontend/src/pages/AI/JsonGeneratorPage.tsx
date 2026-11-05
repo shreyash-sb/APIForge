@@ -1,15 +1,12 @@
-import { Copy, Download, Sparkles, Check, Code, ShoppingBag, Users } from 'lucide-react';
+import { Copy, Download, Sparkles, Check, Code, FileUp } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store/useAppStore';
 import { formatJson, generateJson } from '@/lib/jsonGenerator';
-import { openApiService } from '@/services/openapiService';
-import { USER_MANAGEMENT_SPEC_JSON } from '@/data/userManagementSpec';
-import { ECOMMERCE_SPEC_JSON } from '@/data/ecommerceSpec';
 
 export function JsonGeneratorPage() {
   const specification = useAppStore((state) => state.activeSpecification);
-  const setActiveSpecification = useAppStore((state) => state.setActiveSpecification);
   const [schemaId, setSchemaId] = useState('');
   const [text, setText] = useState('');
   const [message, setMessage] = useState('');
@@ -110,45 +107,17 @@ export function JsonGeneratorPage() {
 
         {!specification ? (
           <div className="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50/70 p-3 text-xs text-slate-500">
-            <span>No specification imported. Choose a demo schema to immediately generate valid synthetic JSON:</span>
-            <div className="flex items-center gap-2 shrink-0">
+            <span>No specification imported. Import an OpenAPI specification to select and generate payloads from schemas, or compose and format JSON directly below.</span>
+            <Link to="/openapi" className="shrink-0">
               <Button
                 size="sm"
                 variant="outline"
-                className="text-xs h-7 gap-1 border-sky-200 text-sky-800 bg-sky-50 hover:bg-sky-100"
-                onClick={async () => {
-                  const res = await openApiService.importSpecification(
-                    'user-management-api.json',
-                    USER_MANAGEMENT_SPEC_JSON
-                  );
-                  if (res.success && res.specification) {
-                    setActiveSpecification(res.specification);
-                    setSchemaId('User');
-                  }
-                }}
+                className="text-xs h-7 gap-1.5 border-violet-200 text-violet-800 bg-violet-50 hover:bg-violet-100"
               >
-                <Users className="h-3.5 w-3.5 text-sky-600" />
-                User Schema
+                <FileUp className="h-3.5 w-3.5 text-violet-600" />
+                Import OpenAPI
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="text-xs h-7 gap-1 border-emerald-200 text-emerald-800 bg-emerald-50 hover:bg-emerald-100"
-                onClick={async () => {
-                  const res = await openApiService.importSpecification(
-                    'ecommerce-store-api.json',
-                    ECOMMERCE_SPEC_JSON
-                  );
-                  if (res.success && res.specification) {
-                    setActiveSpecification(res.specification);
-                    setSchemaId('Product');
-                  }
-                }}
-              >
-                <ShoppingBag className="h-3.5 w-3.5 text-emerald-600" />
-                Product Schema
-              </Button>
-            </div>
+            </Link>
           </div>
         ) : schemas.length === 0 ? (
           <p className="mt-4 text-xs text-slate-400">This specification has no reusable schemas.</p>

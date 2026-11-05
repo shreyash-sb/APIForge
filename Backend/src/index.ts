@@ -34,23 +34,25 @@ if (process.env.MONGODB_URI) {
       await authService.hydrateFromMongo();
       const { collectionService } = await import('./services/collection.service.js');
       await collectionService.hydrateFromMongo();
+      console.log('⚡ APIForge ready for real-world API testing & validation');
     })
     .catch((err: Error) => console.warn('⚠️ MongoDB connection warning:', err.message));
 }
 
 // Allowed origins configuration
 const allowedOrigins = process.env.FRONTEND_URL
-  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim())
+  ? process.env.FRONTEND_URL.split(',').map((url) => url.trim().replace(/\/+$/, ''))
   : ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175', 'http://localhost:3000'];
 
 const isDev = process.env.NODE_ENV !== 'production';
 
 // Only trust X-Forwarded-For when explicitly deployed behind a known reverse proxy
-// (e.g. TRUST_PROXY=1 or TRUST_PROXY=loopback). Otherwise req.ip is the socket address,
-// so clients cannot spoof their IP to evade rate limits or forge audit logs.
+// (e.g. TRUST_PROXY=1 or TRUST_PROXY=loopback, or production platforms like Railway).
 if (process.env.TRUST_PROXY) {
   const value = process.env.TRUST_PROXY.trim();
   app.set('trust proxy', /^\d+$/.test(value) ? Number(value) : value === 'true' ? true : value);
+} else if (!isDev) {
+  app.set('trust proxy', 1);
 }
 
 // Middleware
@@ -60,11 +62,16 @@ app.use(cors({
     if (!origin) {
       return callback(null, true);
     }
-    if (allowedOrigins.includes(origin)) {
+    const normalizedOrigin = origin.replace(/\/+$/, '');
+    if (allowedOrigins.includes(normalizedOrigin) || allowedOrigins.includes('*')) {
+      return callback(null, true);
+    }
+    // Check for domain wildcard patterns (e.g. *.vercel.app)
+    if (allowedOrigins.some((allowed) => allowed.startsWith('*.') && normalizedOrigin.endsWith(allowed.slice(1)))) {
       return callback(null, true);
     }
     // In development mode, allow any localhost or 127.0.0.1 port to support dynamic Vite ports (e.g. 5175)
-    if (isDev && /^http:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(origin)) {
+    if (isDev && /^http:\/\/(localhost|127\.0\.0\.1)(:[0-9]+)?$/.test(normalizedOrigin)) {
       return callback(null, true);
     }
     return callback(null, false);
@@ -110,7 +117,7 @@ app.use(errorHandler);
 
 // Start server
 app.listen(PORT, () => {
-  console.log(`🚀 APIForge Backend running on port ${PORT}`);
+  console.log(`🚀 APIForge Backend running on http://localhost:${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏱️  Request timeout: ${process.env.REQUEST_TIMEOUT || 30000}ms`);
 });

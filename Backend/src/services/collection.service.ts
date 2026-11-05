@@ -34,7 +34,11 @@ export class CollectionService {
             updatedAt: doc.updatedAt,
           });
         }
-        console.log(`🍃 Hydrated ${docs.length} collections from MongoDB`);
+        if (docs.length > 0) {
+          console.log(`📦 Synchronized ${docs.length} collection(s) from MongoDB`);
+        } else {
+          console.log('📦 Collections store ready (0 collections)');
+        }
       } catch (err: unknown) {
         console.warn('⚠️ Failed to hydrate collections from MongoDB:', (err as Error).message);
       }

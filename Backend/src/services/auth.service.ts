@@ -93,7 +93,7 @@ export class AuthService {
           this.emailIndex.set(userObj.email.toLowerCase(), userObj.id);
         }
         if (docs.length > 0) {
-          console.log(`👤 Hydrated ${docs.length} user(s) from MongoDB`);
+          console.log(`👤 Synchronized ${docs.length} user account(s) from MongoDB`);
         }
       } catch (err: unknown) {
         const errorMsg = err instanceof Error ? err.message : String(err);
