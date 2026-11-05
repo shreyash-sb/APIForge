@@ -12,11 +12,6 @@ import type {
 import { formatApiErrorMessage } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export class ValidationApiError extends Error {
   public statusCode?: number;
   public details?: unknown;
@@ -39,7 +34,7 @@ export const validationService = {
 
     try {
       const response = await axios.post<TestCaseValidationResult>(
-        `${API_BASE_URL}/api/validation/validate-single`,
+        `${getApiBaseUrl()}/api/validation/validate-single`,
         payload,
         { timeout: 30000 }
       );
@@ -66,7 +61,7 @@ export const validationService = {
 
     try {
       const response = await axios.post<TestSuiteValidationResult>(
-        `${API_BASE_URL}/api/validation/validate-batch`,
+        `${getApiBaseUrl()}/api/validation/validate-batch`,
         payload,
         { timeout: 90000 } // Extended timeout for batch validation
       );

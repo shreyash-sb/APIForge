@@ -9,17 +9,12 @@ import type {
 import { formatApiErrorMessage, TestExecutionApiError } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export const testExecutionService = {
   async executeSingle(testCase: TestCase): Promise<TestCaseExecutionResult> {
     const payload: ExecuteSingleTestRequest = { testCase };
     try {
       const response = await axios.post<TestCaseExecutionResult>(
-        `${API_BASE_URL}/api/tests/execute-single`,
+        `${getApiBaseUrl()}/api/tests/execute-single`,
         payload,
         { timeout: 35000 }
       );
@@ -38,7 +33,7 @@ export const testExecutionService = {
     const payload: ExecuteBatchTestRequest = { testCases };
     try {
       const response = await axios.post<TestSuiteExecutionResult>(
-        `${API_BASE_URL}/api/tests/execute-batch`,
+        `${getApiBaseUrl()}/api/tests/execute-batch`,
         payload,
         { timeout: 120000 } // Extended timeout for sequential execution of batches
       );

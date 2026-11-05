@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { API_BASE_URL, getMockServeBaseUrl } from '../api';
+import { API_BASE_URL, getMockServeBaseUrl, normalizeApiUrl } from '../api';
 
 describe('mock serve URL configuration', () => {
   it('uses the configured backend origin', () => {
@@ -17,5 +17,19 @@ describe('mock serve URL configuration', () => {
     expect(getMockServeBaseUrl('http://127.0.0.1:3032///')).toBe(
       'http://127.0.0.1:3032/api/mock/serve'
     );
+  });
+
+  it('strips accidental parentheses, brackets, and quotes from environment URLs', () => {
+    expect(normalizeApiUrl('(https://apiforge-production-cb58.up.railway.app)')).toBe(
+      'https://apiforge-production-cb58.up.railway.app'
+    );
+    expect(normalizeApiUrl('"(https://apiforge-production-cb58.up.railway.app/)"')).toBe(
+      'https://apiforge-production-cb58.up.railway.app'
+    );
+    expect(normalizeApiUrl('<https://apiforge-production-cb58.up.railway.app/// >')).toBe(
+      'https://apiforge-production-cb58.up.railway.app'
+    );
+    expect(normalizeApiUrl(null)).toBe('');
+    expect(normalizeApiUrl(undefined)).toBe('');
   });
 });

@@ -3,16 +3,11 @@ import type { OpenApiImportResult } from '@/types/openapi.types';
 import { formatApiErrorMessage } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export const openApiService = {
   async importSpecification(fileName: string, content: string): Promise<OpenApiImportResult> {
     try {
       const response = await axios.post<OpenApiImportResult>(
-        `${API_BASE_URL}/api/openapi/import`,
+        `${getApiBaseUrl()}/api/openapi/import`,
         { fileName, content },
         { timeout: 30000 }
       );

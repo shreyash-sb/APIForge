@@ -8,10 +8,6 @@ import type { EndpointReportItem, FailureBreakdownItem, GenerateReportRequest, R
 import { formatApiErrorMessage } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
 export class ReportApiError extends Error { constructor(message: string) { super(message); this.name = 'ReportApiError'; } }
 
 const csv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;
@@ -34,7 +30,7 @@ export const reportService = {
     };
   },
   async generateReport(payload: GenerateReportRequest): Promise<ReportSummary> {
-    try { return (await axios.post<ReportSummary>(`${API_BASE_URL}/api/reports/generate`, payload, { timeout: 30000 })).data; }
+    try { return (await axios.post<ReportSummary>(`${getApiBaseUrl()}/api/reports/generate`, payload, { timeout: 30000 })).data; }
     catch (error: unknown) { const message = formatApiErrorMessage(error, 'Unable to generate report.'); throw new ReportApiError(message); }
   },
   downloadReportJson(report: ReportSummary) { download(`apiforge-report-${report.metadata.reportId}.json`, 'application/json', JSON.stringify(report, null, 2)); },

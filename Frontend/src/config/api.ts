@@ -6,10 +6,13 @@
 export function normalizeApiUrl(raw?: string | null): string {
   if (!raw) return '';
   let cleaned = String(raw).trim();
-  // Strip surrounding quotes, parentheses, brackets, or angle brackets: e.g. "(https://...)" -> "https://..."
-  cleaned = cleaned.replace(/^[\s"'`()<>{}\[\]]+|[\s"'`()<>{}\[\]]+$/g, '');
-  // Strip any trailing slashes
-  cleaned = cleaned.replace(/\/+$/, '');
+  // Strip surrounding quotes, parentheses, brackets, angle brackets, and trailing slashes
+  let prev = '';
+  while (cleaned !== prev) {
+    prev = cleaned;
+    cleaned = cleaned.replace(/^[\s"'`()<>{}\[\]]+|[\s"'`()<>{}\[\]]+$/g, '');
+    cleaned = cleaned.replace(/\/+$/, '');
+  }
   return cleaned;
 }
 

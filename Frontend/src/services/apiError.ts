@@ -24,7 +24,7 @@ export function formatApiErrorMessage(error: unknown, fallbackMessage: string): 
 
     // 2. Network connectivity / server unavailable
     if (error.code === 'ERR_NETWORK' || error.code === 'ECONNREFUSED' || !error.response) {
-      return 'Unable to reach backend service at http://localhost:3001. Ensure the APIForge backend is running.';
+      return 'Unable to reach backend service. Ensure the APIForge backend is running.';
     }
 
     // 3. Response error payload from APIForge backend
@@ -48,11 +48,17 @@ export function formatApiErrorMessage(error: unknown, fallbackMessage: string): 
     if (status === 401) {
       return 'Your session has expired. Please sign in again.';
     }
+    if (status === 403) {
+      return 'Access forbidden. You do not have permission to perform this action.';
+    }
     if (status === 400) {
       return 'Bad request. Please verify the request parameters and specification format.';
     }
     if (status === 404) {
       return 'The requested APIForge endpoint or resource was not found.';
+    }
+    if (status === 405) {
+      return 'Method Not Allowed (HTTP 405). Please verify that the backend is running and the request URL is correct.';
     }
     if (status === 502 || status === 503 || status === 504) {
       return `Backend gateway error (HTTP ${status}). The service is currently unreachable or overloaded.`;

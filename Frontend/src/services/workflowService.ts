@@ -11,11 +11,6 @@ import type {
 import { sanitizeErrorMessage } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export class WorkflowApiError extends Error {
   readonly details?: string[];
   readonly type?: string;
@@ -48,7 +43,7 @@ function handleWorkflowError(error: unknown, defaultMessage: string): never {
     if (error.code === 'ERR_NETWORK' || !error.response) {
       const currentOrigin = typeof window !== 'undefined' ? window.location.origin : 'frontend origin';
       throw new WorkflowApiError(
-        `Unable to reach backend service at ${API_BASE_URL}. Ensure the backend is running and CORS permits ${currentOrigin}.`,
+        `Unable to reach backend service at ${getApiBaseUrl()}. Ensure the backend is running and CORS permits ${currentOrigin}.`,
         undefined,
         'NETWORK_ERROR'
       );
@@ -71,7 +66,7 @@ export const workflowService = {
   async validateWorkflow(scenario: WorkflowScenario): Promise<ValidateWorkflowResponse> {
     try {
       const response = await axios.post<ValidateWorkflowResponse>(
-        `${API_BASE_URL}/api/workflows/validate`,
+        `${getApiBaseUrl()}/api/workflows/validate`,
         { scenario },
         { timeout: 15000 }
       );
@@ -90,7 +85,7 @@ export const workflowService = {
   ): Promise<SanitizedWorkflowExecutionResult> {
     try {
       const response = await axios.post<SanitizedWorkflowExecutionResult>(
-        `${API_BASE_URL}/api/workflows/execute`,
+        `${getApiBaseUrl()}/api/workflows/execute`,
         { scenario, environment },
         { timeout: 120000 } // Extended timeout for multi-step scenario runs
       );
@@ -109,7 +104,7 @@ export const workflowService = {
   ): Promise<PreviewRequestWorkflowResponse> {
     try {
       const response = await axios.post<PreviewRequestWorkflowResponse>(
-        `${API_BASE_URL}/api/workflows/preview-request`,
+        `${getApiBaseUrl()}/api/workflows/preview-request`,
         { request, environment },
         { timeout: 10000 }
       );

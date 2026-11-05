@@ -4,11 +4,6 @@ import { formatApiErrorMessage } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 import { useAppStore } from '@/store/useAppStore';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export class RequestService {
   async executeRequest(request: ApiRequest): Promise<ApiExecutionResult> {
     try {
@@ -16,7 +11,7 @@ export class RequestService {
       // The backend enforces the user's timeout on the outbound call; the browser waits a
       // little longer so it receives the backend's structured timeout result.
       const response = await axios.post<ApiExecutionResult>(
-        `${API_BASE_URL}/api/requests/execute`,
+        `${getApiBaseUrl()}/api/requests/execute`,
         { ...request, timeoutMs },
         {
           timeout: timeoutMs + 5000,
@@ -41,7 +36,7 @@ export class RequestService {
             success: false,
             error: {
               type: 'NETWORK_ERROR',
-              message: 'Cannot connect to backend server at http://localhost:3001. Make sure it is running.',
+              message: 'Cannot connect to backend server. Make sure it is running.',
             },
           };
         }

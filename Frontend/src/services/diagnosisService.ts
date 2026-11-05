@@ -10,11 +10,6 @@ import type {
 import { formatApiErrorMessage } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export class DiagnosisApiError extends Error {
   public statusCode?: number;
   public details?: unknown;
@@ -35,7 +30,7 @@ export const diagnosisService = {
   ): Promise<DiagnosisResult> {
     try {
       const response = await axios.post<DiagnosisResult>(
-        `${API_BASE_URL}/api/diagnosis/diagnose-single`,
+        `${getApiBaseUrl()}/api/diagnosis/diagnose-single`,
         { testCase, executionResult, validationResult },
         { timeout: 60000 }
       );
@@ -54,7 +49,7 @@ export const diagnosisService = {
   async diagnoseBatch(items: DiagnoseBatchItem[], signal?: AbortSignal): Promise<DiagnoseBatchResult> {
     try {
       const response = await axios.post<DiagnoseBatchResult>(
-        `${API_BASE_URL}/api/diagnosis/diagnose-batch`,
+        `${getApiBaseUrl()}/api/diagnosis/diagnose-batch`,
         { items },
         { timeout: 180000, signal } // Each case is a sequential AI call on the server
       );

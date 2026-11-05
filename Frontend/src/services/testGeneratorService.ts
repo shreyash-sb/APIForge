@@ -3,15 +3,10 @@ import type { TestGenerationRequest, TestSuite } from '@/types/testCase.types';
 import { formatApiErrorMessage, TestGeneratorApiError } from './apiError';
 import { getApiBaseUrl } from '../config/api';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  getApiBaseUrl();
-
 export const testGeneratorService = {
   async generate(payload: TestGenerationRequest): Promise<TestSuite> {
     try {
-      const response = await axios.post<TestSuite>(`${API_BASE_URL}/api/tests/generate`, payload, {
+      const response = await axios.post<TestSuite>(`${getApiBaseUrl()}/api/tests/generate`, payload, {
         timeout: 30000,
       });
       return response.data;

@@ -7,12 +7,9 @@ import type {
   MockRoute,
 } from '@/types/mockServer.types';
 import { formatApiErrorMessage } from './apiError';
-import { API_BASE_URL } from '../config/api';
+import { getApiBaseUrl } from '../config/api';
 
-const getBaseUrl = () =>
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  API_BASE_URL;
+const getBaseUrl = () => getApiBaseUrl();
 
 export class MockServerApiError extends Error {
   constructor(message: string) {
