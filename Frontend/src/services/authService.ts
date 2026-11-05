@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { API_BASE_URL } from '@/config/api';
 import type {
   AuthResponse,
   ChangePasswordPayload,
@@ -8,10 +9,7 @@ import type {
   User,
 } from '@/types/auth.types';
 
-const API_BASE_URL =
-  (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
-  (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+// Uses centralized API_BASE_URL from @/config/api with trailing slashes stripped
 
 export class AuthApiError extends Error {
   constructor(message: string) {
