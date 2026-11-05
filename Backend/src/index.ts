@@ -105,14 +105,17 @@ app.use('/api/collections', requireAuth, collectionRoutes);
 
 // Root status endpoint
 app.get('/', (req, res) => {
-  res.json({
+  res.status(200).json({
+    success: true,
+    message: 'APIForge Backend is Running Successfully!',
+    status: 'OK',
     name: 'APIForge Backend API',
-    status: 'online',
     version: '1.0.0',
     documentation: 'https://github.com/shreyash-sb/APIForge',
     healthCheck: '/health',
     endpoints: {
       health: '/health',
+      apiHealth: '/api/health',
       mockServe: '/api/mock/serve',
       auth: '/api/auth',
       collections: '/api/collections',
@@ -123,15 +126,20 @@ app.get('/', (req, res) => {
   });
 });
 
-// Health check
-app.get('/health', (req, res) => {
-  res.json({
+// Health check handler (supports both /health and /api/health)
+const healthHandler = (req: express.Request, res: express.Response) => {
+  res.status(200).json({
     status: 'ok',
+    healthy: true,
+    message: 'APIForge server is operational',
     timestamp: new Date().toISOString(),
     database: mongoose.connection.readyState === 1 ? 'connected' : 'in-memory',
     aiProvider: process.env.AI_PROVIDER || 'mock',
   });
-});
+};
+
+app.get('/health', healthHandler);
+app.get('/api/health', healthHandler);
 
 // Error handler
 app.use(errorHandler);
