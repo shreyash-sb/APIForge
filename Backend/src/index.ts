@@ -22,7 +22,8 @@ import mongoose from 'mongoose';
 // Environment variables loaded via import 'dotenv/config'
 
 const app = express();
-const PORT = process.env.PORT || 3001;
+const PORT = Number(process.env.PORT) || 3001;
+const HOST = process.env.HOST || '0.0.0.0';
 
 // Optional MongoDB initialization
 if (process.env.MONGODB_URI) {
@@ -116,7 +117,7 @@ app.get('/health', (req, res) => {
 app.use(errorHandler);
 
 // Start server
-app.listen(PORT, () => {
+app.listen(PORT, HOST, () => {
   console.log(`🚀 APIForge Backend running on http://localhost:${PORT}`);
   console.log(`📡 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`⏱️  Request timeout: ${process.env.REQUEST_TIMEOUT || 30000}ms`);
