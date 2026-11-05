@@ -64,7 +64,7 @@ export function sessionIdForToken(token: string): string {
 
 export function resolveGeminiModel(env: NodeJS.ProcessEnv = process.env): string {
   const model = env.GEMINI_MODEL?.trim();
-  return model && /^[A-Za-z0-9._-]{1,80}$/.test(model) ? model : 'gemini-3.8-flash';
+  return model && /^[A-Za-z0-9._-]{1,80}$/.test(model) ? model : 'gemini-3.5-flash';
 }
 
 export class AiCredentialStore {
