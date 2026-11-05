@@ -7,11 +7,12 @@ import type {
   TestSuiteExecutionResult,
 } from '@/types/testExecution.types';
 import { formatApiErrorMessage, TestExecutionApiError } from './apiError';
+import { getApiBaseUrl } from '../config/api';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+  getApiBaseUrl();
 
 export const testExecutionService = {
   async executeSingle(testCase: TestCase): Promise<TestCaseExecutionResult> {

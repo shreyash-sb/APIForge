@@ -107,6 +107,15 @@ app.use('/api/ai-settings', requireAuth, aiSettingsRoutes);
 app.use('/api/auth/login', authLoginRateLimiter);
 app.use('/api/auth/signup', authSignupRateLimiter);
 app.use('/api/auth', authRoutes);
+app.use('/auth', authRoutes);
+app.post('/signup', authSignupRateLimiter, (req, res, next) => {
+  req.url = '/signup';
+  authRoutes(req, res, next);
+});
+app.post('/login', authLoginRateLimiter, (req, res, next) => {
+  req.url = '/login';
+  authRoutes(req, res, next);
+});
 app.use('/api/collections', requireAuth, collectionRoutes);
 
 // Root status endpoint

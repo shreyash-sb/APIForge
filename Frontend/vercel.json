@@ -5,6 +5,10 @@
       "destination": "https://apiforge-production-cb58.up.railway.app/api/:path*"
     },
     {
+      "source": "/auth/:path*",
+      "destination": "https://apiforge-production-cb58.up.railway.app/api/auth/:path*"
+    },
+    {
       "source": "/health",
       "destination": "https://apiforge-production-cb58.up.railway.app/health"
     },

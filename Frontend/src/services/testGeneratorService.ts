@@ -1,11 +1,12 @@
 import axios from 'axios';
 import type { TestGenerationRequest, TestSuite } from '@/types/testCase.types';
 import { formatApiErrorMessage, TestGeneratorApiError } from './apiError';
+import { getApiBaseUrl } from '../config/api';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+  getApiBaseUrl();
 
 export const testGeneratorService = {
   async generate(payload: TestGenerationRequest): Promise<TestSuite> {

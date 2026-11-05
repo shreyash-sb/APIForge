@@ -1,12 +1,13 @@
 import axios from 'axios';
 import type { ApiRequest, ApiExecutionResult } from '@/types/request.types';
 import { formatApiErrorMessage } from './apiError';
+import { getApiBaseUrl } from '../config/api';
 import { useAppStore } from '@/store/useAppStore';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+  getApiBaseUrl();
 
 export class RequestService {
   async executeRequest(request: ApiRequest): Promise<ApiExecutionResult> {

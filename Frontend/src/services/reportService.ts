@@ -6,11 +6,12 @@ import type { TestCaseValidationResult } from '@/types/validation.types';
 import type { DiagnosisResult } from '@/types/diagnosis.types';
 import type { EndpointReportItem, FailureBreakdownItem, GenerateReportRequest, ReportSummary } from '@/types/report.types';
 import { formatApiErrorMessage } from './apiError';
+import { getApiBaseUrl } from '../config/api';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+  getApiBaseUrl();
 export class ReportApiError extends Error { constructor(message: string) { super(message); this.name = 'ReportApiError'; } }
 
 const csv = (value: unknown) => `"${String(value ?? '').replace(/"/g, '""')}"`;

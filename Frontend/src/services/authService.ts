@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { API_BASE_URL } from '@/config/api';
+import { getApiBaseUrl } from '../config/api';
 import type {
   AuthResponse,
   ChangePasswordPayload,
@@ -25,7 +25,7 @@ function getAuthHeaders(token?: string) {
 export const authService = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
     try {
-      const response = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/login`, credentials, {
+      const response = await axios.post<AuthResponse>(`${getApiBaseUrl()}/api/auth/login`, credentials, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 10000,
       });
@@ -43,7 +43,7 @@ export const authService = {
 
   async signup(credentials: SignupCredentials): Promise<AuthResponse> {
     try {
-      const response = await axios.post<AuthResponse>(`${API_BASE_URL}/api/auth/signup`, credentials, {
+      const response = await axios.post<AuthResponse>(`${getApiBaseUrl()}/api/auth/signup`, credentials, {
         headers: { 'Content-Type': 'application/json' },
         timeout: 10000,
       });
@@ -61,7 +61,7 @@ export const authService = {
 
   async getMe(token: string): Promise<User> {
     try {
-      const response = await axios.get<{ success: boolean; user: User }>(`${API_BASE_URL}/api/auth/me`, {
+      const response = await axios.get<{ success: boolean; user: User }>(`${getApiBaseUrl()}/api/auth/me`, {
         headers: getAuthHeaders(token),
         timeout: 10000,
       });
@@ -80,7 +80,7 @@ export const authService = {
   async logout(token?: string): Promise<void> {
     try {
       await axios.post(
-        `${API_BASE_URL}/api/auth/logout`,
+        `${getApiBaseUrl()}/api/auth/logout`,
         {},
         {
           headers: getAuthHeaders(token),
@@ -95,7 +95,7 @@ export const authService = {
   async getLoginActivity(token?: string): Promise<LoginActivityItem[]> {
     try {
       const response = await axios.get<{ success: boolean; activities: LoginActivityItem[] }>(
-        `${API_BASE_URL}/api/auth/activity`,
+        `${getApiBaseUrl()}/api/auth/activity`,
         {
           headers: getAuthHeaders(token),
           timeout: 10000,
@@ -113,7 +113,7 @@ export const authService = {
   async changePassword(token: string, payload: ChangePasswordPayload): Promise<{ success: boolean; message?: string }> {
     try {
       const response = await axios.post<{ success: boolean; message?: string; error?: string }>(
-        `${API_BASE_URL}/api/auth/change-password`,
+        `${getApiBaseUrl()}/api/auth/change-password`,
         payload,
         {
           headers: getAuthHeaders(token),
@@ -132,7 +132,7 @@ export const authService = {
   async deleteAccount(token: string): Promise<{ success: boolean; message?: string }> {
     try {
       const response = await axios.delete<{ success: boolean; message?: string; error?: string }>(
-        `${API_BASE_URL}/api/auth/account`,
+        `${getApiBaseUrl()}/api/auth/account`,
         {
           headers: getAuthHeaders(token),
           timeout: 10000,

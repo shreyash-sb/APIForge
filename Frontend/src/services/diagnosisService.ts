@@ -8,11 +8,12 @@ import type {
   DiagnosisResult,
 } from '@/types/diagnosis.types';
 import { formatApiErrorMessage } from './apiError';
+import { getApiBaseUrl } from '../config/api';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+  getApiBaseUrl();
 
 export class DiagnosisApiError extends Error {
   public statusCode?: number;

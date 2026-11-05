@@ -1,6 +1,8 @@
 import axios from 'axios';
 
-const base = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) || 'http://localhost:3001';
+import { getApiBaseUrl } from '../config/api';
+
+const base = getApiBaseUrl();
 
 export type HealthCheck = {
   status: 'Healthy' | 'Degraded' | 'Unavailable';
@@ -13,7 +15,7 @@ export type HealthCheck = {
 export async function checkBackendHealth(): Promise<HealthCheck> {
   const started = performance.now();
   try {
-    const response = await axios.get(`${base}/health`, { timeout: 5000 });
+    const response = await axios.get(`${getApiBaseUrl()}/health`, { timeout: 5000 });
     const ms = Math.round(performance.now() - started);
     const data = response.data || {};
     return {

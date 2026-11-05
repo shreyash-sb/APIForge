@@ -1,11 +1,12 @@
 import axios from 'axios';
 import type { OpenApiImportResult } from '@/types/openapi.types';
 import { formatApiErrorMessage } from './apiError';
+import { getApiBaseUrl } from '../config/api';
 
 const API_BASE_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_BASE_URL) ||
   (typeof process !== 'undefined' && process.env?.VITE_API_BASE_URL) ||
-  'http://localhost:3001';
+  getApiBaseUrl();
 
 export const openApiService = {
   async importSpecification(fileName: string, content: string): Promise<OpenApiImportResult> {
